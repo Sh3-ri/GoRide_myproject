@@ -1,0 +1,3326 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101813">
+    <meta name="description" content="Find and request a car or bike rental with GoRide. Compare rides, choose your dates, and plan your next trip.">
+    <title>GoRide — Rent a car or bike</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+    <style>
+         :root {
+            color-scheme: dark;
+            --bg: #101813;
+            --panel: #19231c;
+            --panel-soft: #202c23;
+            --ink: #f4f5ed;
+            --muted: #a6b1a5;
+            --green: #c8f169;
+            --green-dark: #9fc74b;
+            --line: rgba(225, 239, 213, .13);
+            --radius: 22px;
+            --shadow: 0 24px 60px rgba(0, 0, 0, .28);
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            background-image: linear-gradient(rgba(16, 24, 19, .86), rgba(16, 24, 19, .93)), url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=88");
+            background-position: center;
+            background-size: cover;
+            background-attachment: fixed;
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.55;
+        }
+        
+        body.modal-open {
+            overflow: hidden;
+        }
+        
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        button,
+        input,
+        select {
+            font: inherit;
+        }
+        
+        button,
+        a,
+        select {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        img {
+            display: block;
+            width: 100%;
+        }
+        
+        .container {
+            width: min(1160px, calc(100% - 40px));
+            margin-inline: auto;
+        }
+        
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            color: var(--green);
+            font-size: .75rem;
+            font-weight: 800;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+        }
+        
+        .eyebrow::before {
+            content: "";
+            width: 22px;
+            height: 1px;
+            background: currentColor;
+        }
+        
+        .button {
+            display: inline-flex;
+            min-height: 48px;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            padding: 0 20px;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            background: var(--green);
+            color: #172010;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform .2s ease, background .2s ease, border-color .2s ease;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            background: #d7ff84;
+        }
+        
+        .button:focus-visible,
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: 3px solid rgba(200, 241, 105, .8);
+            outline-offset: 3px;
+        }
+        
+        .button-quiet {
+            border-color: var(--line);
+            background: transparent;
+            color: var(--ink);
+        }
+        
+        .button-quiet:hover {
+            background: rgba(255, 255, 255, .06);
+        }
+        
+        .site-header {
+            position: absolute;
+            inset: 0 0 auto;
+            z-index: 5;
+            border-bottom: 1px solid rgba(255, 255, 255, .1);
+        }
+        
+        .nav {
+            display: flex;
+            min-height: 82px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+        
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            font-size: 1.35rem;
+            font-weight: 900;
+            letter-spacing: -.06em;
+        }
+        
+        .brand-mark {
+            display: grid;
+            width: 38px;
+            height: 38px;
+            place-items: center;
+            border-radius: 13px;
+            background: var(--green);
+            color: #172010;
+        }
+        
+        .brand-mark svg {
+            width: 23px;
+            height: 23px;
+        }
+        
+        .brand span:last-child {
+            color: var(--green);
+        }
+        
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            color: #d0d8ca;
+            font-size: .9rem;
+        }
+        
+        .nav-links a:hover {
+            color: var(--green);
+        }
+        
+        .nav .button {
+            min-height: 43px;
+            padding-inline: 17px;
+            font-size: .88rem;
+        }
+        
+        .hero {
+            position: relative;
+            display: flex;
+            min-height: 690px;
+            align-items: center;
+            overflow: hidden;
+            padding: 140px 0 172px;
+            background: linear-gradient(90deg, rgba(10, 17, 12, .94) 0%, rgba(10, 17, 12, .78) 44%, rgba(10, 17, 12, .22) 100%), linear-gradient(0deg, var(--bg) 0%, transparent 27%), url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=88") center 54% / cover;
+        }
+        
+        .hero-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(280px, .95fr);
+            align-items: center;
+            gap: 36px;
+        }
+        
+        .hero-content {
+            max-width: 710px;
+        }
+        
+        .hero-visual {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .hero-visual-card {
+            position: relative;
+            width: min(100%, 480px);
+            border: 1px solid rgba(200, 241, 105, .2);
+            border-radius: 30px;
+            overflow: hidden;
+            background: rgba(17, 23, 18, .7);
+            box-shadow: 0 26px 55px rgba(0, 0, 0, .25);
+        }
+        
+        .hero-visual-card img {
+            height: 560px;
+            object-fit: cover;
+        }
+        
+        .hero-floating-card {
+            position: absolute;
+            right: 18px;
+            bottom: 20px;
+            display: grid;
+            gap: 10px;
+            min-width: 210px;
+            padding: 16px 17px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 18px;
+            background: rgba(17, 23, 18, .82);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, .2);
+        }
+        
+        .hero-floating-card strong {
+            font-size: 1.4rem;
+            line-height: 1;
+            letter-spacing: -.06em;
+        }
+        
+        .hero-floating-card span {
+            color: var(--muted);
+            font-size: .76rem;
+        }
+        
+        .hero h1 {
+            max-width: 710px;
+            margin: 21px 0 18px;
+            font-size: clamp(3.1rem, 7.3vw, 6.1rem);
+            line-height: .99;
+            letter-spacing: -.075em;
+        }
+        
+        .hero h1 span {
+            color: var(--green);
+        }
+        
+        .hero-copy {
+            max-width: 520px;
+            margin: 0;
+            color: #c3cdc0;
+            font-size: 1.08rem;
+        }
+        
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 29px;
+        }
+        
+        .hero-note {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-top: 25px;
+            color: #d6dfd2;
+            font-size: .83rem;
+        }
+        
+        .hero-note svg {
+            width: 17px;
+            color: var(--green);
+        }
+        
+        .search-shell {
+            position: relative;
+            z-index: 2;
+            margin-top: -92px;
+        }
+        
+        .search-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr auto;
+            align-items: end;
+            gap: 12px;
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, .1);
+            border-radius: 22px;
+            background: rgba(25, 35, 28, .97);
+            box-shadow: var(--shadow);
+        }
+        
+        .field {
+            display: grid;
+            gap: 7px;
+        }
+
+        .field[hidden] {
+            display: none;
+            min-width: 0;
+        }
+        
+        .field label {
+            color: #aeb9ad;
+            font-size: .74rem;
+            font-weight: 750;
+        }
+        
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            min-height: 48px;
+            padding: 0 13px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #131c16;
+            color: var(--ink);
+        }
+
+        .field textarea {
+            min-height: 90px;
+            padding-block: 11px;
+            resize: vertical;
+        }
+        
+        .field input::placeholder {
+            color: #738072;
+        }
+        
+        .field .verification-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .field .verification-inline .map-tool {
+            flex: 0 0 auto;
+        }
+        
+        .field .verification-inline input[type="text"] {
+            flex: 1 1 120px;
+            min-height: 38px;
+            padding: 0 11px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #131c16;
+            color: var(--ink);
+        }
+        
+        .verification-status {
+            display: block;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: .77rem;
+        }
+        
+        .verification-status.is-verified {
+            color: var(--green);
+        }
+        
+        .search-panel .button {
+            min-height: 48px;
+        }
+        
+        .route-planner {
+            padding: 26px 0 0;
+        }
+        
+        .route-planner-card {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            background: var(--panel);
+            box-shadow: var(--shadow);
+        }
+        
+        .route-planner-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 18px 21px;
+        }
+        
+        .route-planner-head h2 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+        
+        .route-planner-head p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: .82rem;
+        }
+        
+        #tripMap {
+            height: 360px;
+            width: 100%;
+            background: #26352a;
+        }
+        
+        .route-planner-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            min-height: 56px;
+            padding: 10px 20px;
+            border-top: 1px solid var(--line);
+        }
+        
+        #tripMapStatus {
+            color: var(--muted);
+            font-size: .8rem;
+        }
+        
+        #tripRouteSummary {
+            color: var(--green);
+            font-size: .82rem;
+            font-weight: 800;
+        }
+        
+        .section {
+            padding: 100px 0;
+        }
+        
+        .section-heading {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        
+        .section-heading h2 {
+            margin: 10px 0 0;
+            font-size: clamp(2.1rem, 4vw, 3.5rem);
+            line-height: 1.05;
+            letter-spacing: -.06em;
+        }
+        
+        .section-heading p {
+            max-width: 400px;
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .monthly-update-card {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 22px;
+            padding: 26px 30px;
+            border: 1px solid rgba(200, 241, 105, .25);
+            border-radius: 22px;
+            background: radial-gradient(ellipse at 100% 0, rgba(200, 241, 105, .12), transparent 42%), var(--panel);
+        }
+
+        .monthly-update-card h3 {
+            margin: 0 0 7px;
+            font-size: 1.25rem;
+        }
+
+        .monthly-update-card p {
+            max-width: 680px;
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .monthly-update-date {
+            color: var(--green);
+            font-size: .9rem;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 620px) {
+            .monthly-update-card {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 22px;
+            }
+        }
+        
+        .fleet-section {
+            padding-top: 74px;
+        }
+        
+        .fleet-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 25px 0 22px;
+        }
+        
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .filter-button {
+            min-height: 40px;
+            padding: 0 16px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: transparent;
+            color: #c7d0c4;
+            cursor: pointer;
+        }
+        
+        .filter-button[aria-pressed="true"] {
+            border-color: var(--green);
+            background: var(--green);
+            color: #172010;
+            font-weight: 800;
+        }
+        
+        .result-count {
+            color: var(--muted);
+            font-size: .86rem;
+        }
+        
+        .vehicle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 19px;
+        }
+        
+        .vehicle-card {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--panel);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .16), 0 0 18px rgba(200, 241, 105, .035);
+            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+        }
+        
+        .vehicle-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(200, 241, 105, .56);
+            box-shadow: 0 20px 44px rgba(0, 0, 0, .25), 0 0 27px rgba(200, 241, 105, .13);
+        }
+        
+        .vehicle-photo {
+            position: relative;
+            height: 218px;
+            overflow: hidden;
+            background: #26352a;
+        }
+        
+        .vehicle-photo img {
+            height: 100%;
+            object-fit: cover;
+            transition: transform .5s ease;
+        }
+        
+        .vehicle-card:hover .vehicle-photo img {
+            transform: scale(1.045);
+        }
+        
+        .vehicle-type {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, .19);
+            border-radius: 999px;
+            background: rgba(15, 24, 17, .78);
+            color: #eaf5df;
+            font-size: .73rem;
+            font-weight: 800;
+            backdrop-filter: blur(8px);
+        }
+        
+        .vehicle-body {
+            padding: 19px;
+        }
+        
+        .vehicle-title-row {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        
+        .vehicle-title-row h3 {
+            margin: 0;
+            font-size: 1.18rem;
+            letter-spacing: -.03em;
+        }
+        
+        .rating {
+            flex: 0 0 auto;
+            color: var(--green);
+            font-size: .84rem;
+            font-weight: 800;
+        }
+        
+        .vehicle-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            margin: 12px 0 17px;
+            color: var(--muted);
+            font-size: .79rem;
+        }
+        
+        .vehicle-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .vehicle-meta svg {
+            width: 15px;
+            height: 15px;
+        }
+        
+        .vehicle-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 1px solid var(--line);
+        }
+        
+        .price {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            font-size: 1.23rem;
+            font-weight: 900;
+            letter-spacing: -.04em;
+        }
+        
+        .price-stack {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 10px;
+        }
+        
+        .price-amount {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 4px;
+            color: var(--green);
+        }
+        
+        .price small,
+        .price-amount small {
+            color: var(--muted);
+            font-size: .74rem;
+            font-weight: 500;
+            letter-spacing: 0;
+        }
+
+        .price-original {
+            color: var(--muted);
+            font-size: .73rem;
+            font-weight: 600;
+            text-decoration: line-through;
+            opacity: .8;
+        }
+
+        .discount-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, .12);
+            color: var(--green);
+            font-size: .67rem;
+            font-weight: 800;
+            letter-spacing: .02em;
+            text-transform: uppercase;
+        }
+        
+        .vehicle-foot .button {
+            min-height: 40px;
+            padding-inline: 15px;
+            font-size: .83rem;
+        }
+        
+        .empty-state {
+            grid-column: 1 / -1;
+            padding: 48px 20px;
+            border: 1px dashed var(--line);
+            border-radius: var(--radius);
+            color: var(--muted);
+            text-align: center;
+        }
+        
+        .booking-list {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .booking-entry {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 17px 20px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--panel);
+        }
+        
+        .booking-entry h3 {
+            margin: 0 0 4px;
+            font-size: 1rem;
+        }
+        
+        .booking-entry p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .84rem;
+        }
+        
+        .booking-entry .booking-amount {
+            flex: 0 0 auto;
+            color: var(--green);
+            font-weight: 850;
+        }
+        
+        .booking-entry .booking-remove {
+            min-height: 36px;
+            padding: 0 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+        }
+        
+        .booking-entry.is-cancelled {
+            border-color: rgba(252, 165, 165, .4);
+            background: rgba(127, 29, 29, .08);
+        }
+        
+        .booking-entry .booking-remove:hover {
+            border-color: #fca5a5;
+            color: #fca5a5;
+        }
+        
+        .booking-entry .booking-remove:disabled {
+            opacity: .7;
+            cursor: not-allowed;
+        }
+        
+        .booking-details {
+            min-width: 0;
+            flex: 1;
+        }
+        
+        .booking-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        
+        .booking-status {
+            display: inline-block;
+            margin-top: 6px;
+            color: var(--green);
+            font-size: .76rem;
+            font-weight: 800;
+        }
+        
+        .booking-status.cancelled {
+            color: #fca5a5;
+        }
+        
+        .booking-notice {
+            margin: 0 0 18px;
+            color: var(--muted);
+            font-size: .88rem;
+        }
+        
+        .booking-error {
+            margin: 0 0 18px;
+            color: #fca5a5;
+            font-size: .88rem;
+        }
+        
+        .driver-section {
+            padding: 0 0 92px;
+        }
+        
+        .driver-layout {
+            display: grid;
+            grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+            gap: 20px;
+            align-items: start;
+        }
+        
+        .driver-form,
+        .driver-roster {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            background: var(--panel);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, .2);
+        }
+        
+        .driver-form {
+            display: grid;
+            gap: 14px;
+        }
+        
+        .driver-photo-field {
+            display: grid;
+            gap: 8px;
+        }
+        
+        .driver-photo-field input {
+            width: 100%;
+            color: var(--muted);
+            font-size: .85rem;
+        }
+        
+        .driver-photo-field input::file-selector-button {
+            min-height: 38px;
+            margin-right: 10px;
+            padding: 0 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--panel-soft);
+            color: var(--ink);
+            cursor: pointer;
+        }
+        
+        .driver-photo-preview {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--muted);
+            font-size: .82rem;
+        }
+        
+        .driver-photo-preview img,
+        .driver-avatar {
+            width: 58px;
+            height: 58px;
+            flex: 0 0 auto;
+            border: 1px solid rgba(200, 241, 105, .3);
+            border-radius: 50%;
+            background: var(--panel-soft);
+            object-fit: cover;
+        }
+        
+        .driver-roster {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .driver-roster h3 {
+            margin: 0;
+        }
+        
+        .driver-list {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .driver-entry {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+        }
+        
+        .driver-entry-info {
+            min-width: 0;
+            flex: 1;
+        }
+        
+        .driver-entry-info strong {
+            display: block;
+            overflow-wrap: anywhere;
+        }
+
+        .driver-verified-badge {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, .12);
+            color: var(--green);
+            font-size: .68rem;
+            font-weight: 800;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+        }
+        
+        .driver-entry-info a {
+            color: var(--green);
+            font-size: .86rem;
+        }
+        
+        .driver-entry-info span {
+            display: block;
+            color: var(--muted);
+            font-size: .78rem;
+        }
+        
+        .driver-roster .booking-notice {
+            margin: 0;
+        }
+        
+        .driver-request-list {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .driver-request {
+            display: grid;
+            gap: 8px;
+            padding: 13px;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: rgba(255, 255, 255, .025);
+        }
+        
+        .driver-request strong {
+            display: block;
+        }
+        
+        .driver-request p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .82rem;
+        }
+        
+        .driver-request-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 9px;
+        }
+        
+        .driver-request-actions .button {
+            min-height: 38px;
+            padding: 0 14px;
+            font-size: .82rem;
+        }
+        
+        .driver-request-actions select {
+            min-height: 38px;
+            max-width: 100%;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #131c16;
+            color: var(--ink);
+        }
+        
+        .driver-request .map-tool {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .report-button {
+            min-height: 34px;
+            padding: 0 12px;
+            border: 1px solid rgba(255, 138, 76, .4);
+            border-radius: 999px;
+            background: rgba(255, 138, 76, .08);
+            color: #ffd7bf;
+            font-size: .76rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        
+        .report-button:hover {
+            border-color: rgba(255, 138, 76, .7);
+            background: rgba(255, 138, 76, .12);
+        }
+        
+        .driver-report-panel {
+            display: grid;
+            gap: 12px;
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, .025);
+        }
+        
+        .driver-report-panel h3 {
+            margin: 0;
+        }
+        
+        .driver-report-form {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .driver-report-form select,
+        .driver-report-form textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #131c16;
+            color: var(--ink);
+            padding: 10px 12px;
+        }
+        
+        .driver-report-form textarea {
+            min-height: 98px;
+            resize: vertical;
+        }
+        
+        .driver-report-list {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .driver-report-item {
+            display: grid;
+            gap: 5px;
+            padding: 12px 13px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(17, 23, 18, .72);
+        }
+        
+        .driver-report-item strong {
+            color: #ffd7bf;
+        }
+        
+        .driver-report-item p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .8rem;
+        }
+        
+        .benefits {
+            padding: 5px 0 96px;
+        }
+        
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        
+        .benefit-card {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: linear-gradient(145deg, #1a251d, #151e18);
+        }
+        
+        .benefit-icon {
+            display: grid;
+            width: 42px;
+            height: 42px;
+            place-items: center;
+            border-radius: 13px;
+            background: rgba(200, 241, 105, .12);
+            color: var(--green);
+        }
+        
+        .benefit-icon svg {
+            width: 21px;
+            height: 21px;
+        }
+        
+        .benefit-card h3 {
+            margin: 16px 0 6px;
+            font-size: 1.05rem;
+        }
+        
+        .benefit-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .88rem;
+        }
+        
+        .cta {
+            padding: 0 0 100px;
+        }
+        
+        .cta-panel {
+            position: relative;
+            display: flex;
+            min-height: 250px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 25px;
+            overflow: hidden;
+            padding: 40px 48px;
+            border: 1px solid rgba(200, 241, 105, .27);
+            border-radius: 28px;
+            background: radial-gradient(ellipse at 90% 20%, rgba(200, 241, 105, .17), transparent 35%), linear-gradient(120deg, #1b281e, #162019 70%);
+            box-shadow: 0 18px 48px rgba(0, 0, 0, .19), 0 0 30px rgba(200, 241, 105, .07);
+        }
+        
+        .cta-panel h2 {
+            max-width: 570px;
+            margin: 9px 0 10px;
+            font-size: clamp(2rem, 4vw, 3rem);
+            line-height: 1.05;
+            letter-spacing: -.06em;
+        }
+        
+        .cta-panel p {
+            margin: 0;
+            color: var(--muted);
+        }
+        
+        .cta-panel .button {
+            flex: 0 0 auto;
+        }
+        
+        footer {
+            padding: 25px 0;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: .83rem;
+        }
+        
+        .footer-inner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+        
+        .footer-brand {
+            color: var(--ink);
+            font-weight: 900;
+        }
+        
+        .footer-brand span {
+            color: var(--green);
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 18px;
+        }
+        
+        .footer-links a:hover {
+            color: var(--green);
+        }
+        
+        .helpline-bar {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 30;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border: 1px solid rgba(200, 241, 105, .28);
+            border-radius: 999px;
+            background: rgba(22, 32, 24, .92);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, .2);
+            color: var(--ink);
+            backdrop-filter: blur(8px);
+        }
+        
+        .helpline-bar strong {
+            color: var(--green);
+            letter-spacing: -.04em;
+        }
+        
+        .helpline-bar a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+        }
+        
+        .helpline-bar svg {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+        }
+        
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 24px;
+            background: rgba(3, 8, 5, .78);
+            backdrop-filter: blur(8px);
+        }
+        
+        .modal-backdrop.is-open {
+            display: flex;
+        }
+        
+        .booking-modal {
+            position: relative;
+            width: min(100%, 520px);
+            padding: 28px;
+            border: 1px solid rgba(200, 241, 105, .3);
+            border-radius: 24px;
+            background: #19231c;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, .5), 0 0 30px rgba(200, 241, 105, .1);
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: grid;
+            width: 38px;
+            height: 38px;
+            place-items: center;
+            border: 1px solid var(--line);
+            border-radius: 50%;
+            background: transparent;
+            color: var(--ink);
+            cursor: pointer;
+        }
+        
+        .booking-modal h2 {
+            margin: 8px 42px 4px 0;
+            font-size: 1.8rem;
+            letter-spacing: -.05em;
+        }
+        
+        .modal-description {
+            margin: 0 0 20px;
+            color: var(--muted);
+            font-size: .9rem;
+        }
+        
+        .booking-vehicle {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            margin-bottom: 18px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: rgba(255, 255, 255, .025);
+        }
+        
+        .booking-vehicle img {
+            width: 80px;
+            height: 60px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+        
+        .booking-vehicle strong {
+            display: block;
+        }
+        
+        .booking-vehicle span {
+            color: var(--muted);
+            font-size: .82rem;
+        }
+        
+        .booking-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .booking-fields .wide {
+            grid-column: 1 / -1;
+        }
+        
+        .map-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .map-tool {
+            min-height: 38px;
+            padding: 0 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .035);
+            color: var(--ink);
+            font-size: .8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .field > .map-tool {
+            width: 100%;
+            min-height: 44px;
+        }
+        
+        .map-tool:hover {
+            border-color: rgba(200, 241, 105, .5);
+            color: var(--green);
+        }
+        
+        #pickupMap {
+            width: 100%;
+            height: 270px;
+            margin-top: 12px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: #26352a;
+        }
+        
+        .map-status {
+            min-height: 20px;
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: .78rem;
+        }
+        
+        .route-summary {
+            margin: 9px 0 0;
+            color: var(--green);
+            font-size: .84rem;
+            font-weight: 800;
+        }
+        
+        .leaflet-container {
+            z-index: 0;
+            color: #172010;
+            font: inherit;
+        }
+        
+        .leaflet-control-attribution {
+            font-size: 10px !important;
+        }
+        
+        .total-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 18px 0;
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+        }
+        
+        .total-row strong {
+            color: var(--green);
+            font-size: 1.25rem;
+        }
+        
+        .booking-modal form>.button {
+            width: 100%;
+        }
+        
+        .form-message {
+            display: none;
+            margin-top: 14px;
+            padding: 12px;
+            border: 1px solid rgba(200, 241, 105, .3);
+            border-radius: 12px;
+            background: rgba(200, 241, 105, .08);
+            color: #e8f6d4;
+            font-size: .85rem;
+        }
+        
+        .form-message.is-visible {
+            display: block;
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        @media (max-width: 850px) {
+            .nav-links {
+                gap: 18px;
+            }
+            .hero {
+                min-height: 630px;
+                background-position: 59% center;
+            }
+            .hero-layout {
+                grid-template-columns: 1fr;
+            }
+            .hero-visual {
+                order: -1;
+            }
+            .hero-visual-card img {
+                height: 440px;
+            }
+            .search-panel {
+                grid-template-columns: 1fr 1fr;
+            }
+            .vehicle-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .driver-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 620px) {
+            .container {
+                width: min(100% - 30px, 1160px);
+            }
+            .nav {
+                min-height: 70px;
+            }
+            .nav-links {
+                display: none;
+            }
+            .nav .button {
+                min-height: 40px;
+                padding-inline: 14px;
+            }
+            .helpline-bar {
+                right: 12px;
+                bottom: 12px;
+                padding: 10px 12px;
+            }
+            .helpline-bar a {
+                gap: 6px;
+                font-size: .78rem;
+            }
+            .helpline-bar strong {
+                font-size: .78rem;
+            }
+            .hero {
+                min-height: 650px;
+                padding: 120px 0 145px;
+                background-position: 62% center;
+            }
+            body {
+                background-attachment: scroll;
+            }
+            .hero h1 {
+                font-size: clamp(3rem, 14vw, 4.4rem);
+            }
+            .hero-copy {
+                font-size: .98rem;
+            }
+            .search-shell {
+                margin-top: -83px;
+            }
+            .search-panel {
+                grid-template-columns: 1fr;
+                padding: 14px;
+            }
+            .search-panel .button {
+                width: 100%;
+            }
+            .route-planner-head,
+            .route-planner-foot {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            #tripMap {
+                height: 290px;
+            }
+            .section {
+                padding: 76px 0;
+            }
+            .fleet-section {
+                padding-top: 58px;
+            }
+            .section-heading {
+                align-items: start;
+                flex-direction: column;
+            }
+            .section-heading p {
+                font-size: .9rem;
+            }
+            .fleet-controls {
+                align-items: start;
+                flex-direction: column;
+            }
+            .vehicle-grid,
+            .benefit-grid {
+                grid-template-columns: 1fr;
+            }
+            .driver-section {
+                padding-bottom: 72px;
+            }
+            .vehicle-photo {
+                height: 230px;
+            }
+            .benefits {
+                padding-bottom: 72px;
+            }
+            .cta {
+                padding-bottom: 72px;
+            }
+            .cta-panel {
+                align-items: start;
+                flex-direction: column;
+                padding: 30px 24px;
+            }
+            .footer-inner {
+                align-items: start;
+                flex-direction: column;
+            }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                animation-duration: .01ms !important;
+                transition-duration: .01ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <nav class="container nav" aria-label="Main navigation">
+            <a class="brand" href="#home" aria-label="GoRide home">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M3 14.5 5.2 8a2 2 0 0 1 1.9-1.3h9.8A2 2 0 0 1 18.8 8l2.2 6.5v4h-2v-2H5v2H3v-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 13h14M7 10h10M7 15.5h.01M17 15.5h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span> Go
+                <span>Ride</span>
+            </a>
+            <div class="nav-links">
+                <a href="#fleet">Explore rides</a>
+                <a href="#monthly-updates">Monthly updates</a>
+                <a href="#bookings">My bookings</a>
+                <a href="#drivers">Driver registration</a>
+                <a href="#benefits">Why GoRide</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <a class="button" href="#fleet">Find a ride <span aria-hidden="true">↗</span></a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" id="home">
+            <div class="container hero-layout">
+                <div class="hero-content">
+                    <span class="eyebrow">Your next trip starts here</span>
+                    <h1>Your ride.<br>Your <span>choice.</span></h1>
+                    <p class="hero-copy">Choose a car, bike, rickshaw, or send a parcel with GoRide courier. Pick the service that works for you.</p>
+                    <div class="hero-actions">
+                        <a class="button" href="#fleet">Explore vehicles <span aria-hidden="true">→</span></a>
+                        <a class="button button-quiet" href="#benefits">How it works</a>
+                    </div>
+                    <div class="hero-note">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>                        </svg> Flexible rentals. Clear per-kilometre rates. Easy booking requests.
+                    </div>
+                </div>
+
+                <div class="hero-visual" aria-label="GoRide vehicle showcase">
+                    <div class="hero-visual-card">
+                        <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=85" alt="Car ready for rental on a city drive">
+                        <div class="hero-floating-card">
+                            <strong>1.2k+</strong>
+                            <span>rides booked this month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="search-shell container" aria-label="Find a rental">
+            <form class="search-panel" id="searchForm">
+                <div class="field">
+                    <label for="searchLocation">From location</label>
+                    <input id="searchLocation" name="from" type="search" value="Karachi, Pakistan" placeholder="City, address or landmark" required>
+                    <button class="map-tool" type="button" id="useCurrentSearchLocation">Use my current location</button>
+                    <small class="map-status" id="searchLocationStatus" aria-live="polite">Tap to use your device location. Allow location access when your browser asks.</small>
+                </div>
+                <div class="field">
+                    <label for="searchDestination">To location</label>
+                    <input id="searchDestination" name="to" type="search" placeholder="City, address or landmark" required>
+                </div>
+                <div class="field">
+                    <label for="searchPickup">Pickup date</label>
+                    <input id="searchPickup" name="pickup" type="date" required>
+                </div>
+                <div class="field">
+                    <label for="searchReturn">Return date</label>
+                    <input id="searchReturn" name="return" type="date" required>
+                </div>
+                <button class="button" type="submit">Choose a ride <span aria-hidden="true">→</span></button>
+            </form>
+            <section class="route-planner" aria-labelledby="routePlannerTitle">
+                <div class="route-planner-card">
+                    <div class="route-planner-head">
+                        <div>
+                            <h2 id="routePlannerTitle">Your route</h2>
+                            <p>Enter your pickup and drop-off locations above, then choose a ride.</p>
+                        </div>
+                    </div>
+                    <div id="tripMap" role="application" aria-label="City-to-city route preview map"></div>
+                    <div class="route-planner-foot">
+                        <span id="tripMapStatus" aria-live="polite">Route preview appears here after you enter both locations.</span>
+                        <span id="tripRouteSummary" aria-live="polite"></span>
+                        <a class="map-tool" href="#fleet">Browse rides</a>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <section class="section fleet-section" id="fleet">
+            <div class="container">
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">The GoRide collection</span>
+                        <h2>Choose your GoRide service.</h2>
+                    </div>
+                    <p>Compare rides or request door-to-door parcel delivery, then choose the GoRide service that works for you.</p>
+                </div>
+                <div class="fleet-controls">
+                    <div class="filters" role="group" aria-label="Filter GoRide services by type">
+                        <button class="filter-button" type="button" data-filter="all" aria-pressed="true">All rides</button>
+                        <button class="filter-button" type="button" data-filter="car" aria-pressed="false">Cars</button>
+                        <button class="filter-button" type="button" data-filter="bike" aria-pressed="false">Bikes</button>
+                        <button class="filter-button" type="button" data-filter="rickshaw" aria-pressed="false">Rickshaws</button>
+                        <button class="filter-button" type="button" data-filter="courier" aria-pressed="false">Courier</button>
+                    </div>
+                    <span class="result-count" id="resultCount" aria-live="polite"></span>
+                </div>
+                <div class="vehicle-grid" id="vehicleGrid"></div>
+            </div>
+        </section>
+
+        <section class="section" id="monthly-updates" style="padding-top: 0;">
+            <div class="container">
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">GoRide news</span>
+                        <h2>Monthly update.</h2>
+                    </div>
+                    <p>Check this space each month for the latest GoRide information.</p>
+                </div>
+                <article class="monthly-update-card">
+                    <div>
+                        <h3 id="monthlyUpdateTitle">This month's GoRide check-in</h3>
+                        <p>Review the available vehicles, current rates, and service details before booking. Any changes to prices or availability will appear in the fleet above.</p>
+                    </div>
+                    <time class="monthly-update-date" id="monthlyUpdateDate"></time>
+                </article>
+            </div>
+        </section>
+
+        <section class="section" id="bookings" style="padding-top: 0;">
+            <div class="container">
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">Your ride requests</span>
+                        <h2>My bookings.</h2>
+                    </div>
+                    <a class="button button-quiet" href="#fleet">Choose another ride</a>
+                </div>
+                <p class="booking-notice">Booking requests and contact details are saved locally in this browser only; they are not encrypted or sent to GoRide. A rental is not confirmed until the driver contacts you.</p>
+                <div class="booking-list" id="bookingList" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <section class="driver-section" id="drivers">
+            <div class="container">
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">Join the GoRide network</span>
+                        <h2>Driver registration.</h2>
+                    </div>
+                    <p>Add a driver profile on this device. Online account registration and identity verification are not active yet.</p>
+                </div>
+                <div class="driver-layout">
+                    <form class="driver-form" id="driverForm">
+                        <div class="field">
+                            <label for="driverName">Driver name</label>
+                            <input id="driverName" name="name" type="text" autocomplete="name" maxlength="80" placeholder="Your full name" required>
+                        </div>
+                        <div class="field">
+                            <label for="driverPhone">Phone number</label>
+                            <input id="driverPhone" name="phone" type="tel" autocomplete="tel" inputmode="tel" pattern="\+?[0-9\s()-]{7,20}" title="Enter a phone number with 7–20 digits, spaces or + - ( )" placeholder="+92 300 1234567" required>
+                        </div>
+                        <div class="driver-photo-field">
+                            <label for="driverPhoto">Driver photo</label>
+                            <input id="driverPhoto" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+                            <div class="driver-photo-preview">
+                                <img id="driverPhotoPreview" alt="Selected driver photo preview" hidden>
+                                <span id="driverPhotoHint">Choose a clear JPG, PNG or WebP photo (up to 5 MB).</span>
+                            </div>
+                        </div>
+                        <label class="booking-notice" for="driverVerified" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input id="driverVerified" name="verified" type="checkbox" checked>
+                            <span>Verified driver profile required for this GoRide account.</span>
+                        </label>
+                        <p class="booking-notice"><strong>Driver website fee: PKR 500 per 12 hours.</strong> Pay GoRide separately. This website does not collect or verify payments.</p>
+                        <button class="button" type="submit" id="registerDriverButton">Register driver <span aria-hidden="true">→</span></button>
+                        <p class="booking-notice" id="driverFormMessage" role="status" aria-live="polite">To register, the driver must be verified and the profile must be saved only on this device.</p>
+                    </form>
+                    <div class="driver-roster">
+                        <h3>Registered drivers</h3>
+                        <p class="booking-notice">Profiles and requests are unencrypted and local to this browser. Assignment does not notify a driver; contact them before confirming “On the way.”</p>
+                        <div class="driver-list" id="driverList" aria-live="polite"></div>
+                        <h3>Incoming ride and courier requests</h3>
+                        <div class="driver-request-list" id="driverRequestList" aria-live="polite"></div>
+                        <div class="driver-report-panel">
+                            <h3>Company complaint</h3>
+                            <form class="driver-report-form" id="driverIssueForm">
+                                <select id="driverIssueType" required>
+                                    <option value="">Select complaint type</option>
+                                    <option value="late-arrival">Late arrival</option>
+                                    <option value="no-response">No response</option>
+                                    <option value="wrong-route">Wrong route</option>
+                                    <option value="misconduct">Unprofessional behavior</option>
+                                    <option value="vehicle-issue">Vehicle issue</option>
+                                </select>
+                                <textarea id="driverIssueDetails" placeholder="Describe the problem clearly for the company..." required></textarea>
+                                <button class="button" type="submit">Send complaint to company</button>
+                            </form>
+                            <div class="driver-report-list" id="driverIssueList" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="benefits" id="benefits">
+            <div class="container">
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">The easy way to get moving</span>
+                        <h2>Good rides. No guesswork.</h2>
+                    </div>
+                    <p>We keep the essentials simple, so you can spend less time planning and more time out there.</p>
+                </div>
+                <div class="benefit-grid">
+                    <article class="benefit-card">
+                        <span class="benefit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M6 4h12a2 2 0 0 1 2 2v13H4V6a2 2 0 0 1 2-2ZM8 2v4m8-4v4m-8 6h3m2 0h3m-8 4h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        <h3>Dates that work for you</h3>
+                        <p>Choose your pickup and return dates and see an estimated total before sending a request.</p>
+                    </article>
+                    <article class="benefit-card">
+                        <span class="benefit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-4.4 7-11V5l-7-3-7 3v5c0 6.6 7 11 7 11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        <h3>Clear per-kilometre rates</h3>
+                        <p>Check each ride’s rate per kilometre and see an estimated route fare before sending a request.</p>
+                    </article>
+                    <article class="benefit-card">
+                        <span class="benefit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 2.3 5.7L4 20m0-5v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        <h3>Simple booking request</h3>
+                        <p>Pick a ride and share your details. The request form is ready to connect to your rental team.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta" id="contact">
+            <div class="container">
+                <div class="cta-panel">
+                    <div>
+                        <span class="eyebrow">Ready when you are</span>
+                        <h2>Make room for a little adventure.</h2>
+                        <p>Choose your wheels and start planning your next ride.</p>
+                    </div>
+                    <a class="button" href="#fleet">Browse the fleet <span aria-hidden="true">→</span></a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container footer-inner">
+            <a class="footer-brand" href="#home">Go<span>Ride</span></a>
+            <span>© <span id="year"></span> GoRide. All rights reserved.</span>
+            <div class="footer-links"><a href="#fleet">Vehicles</a><a href="#benefits">How it works</a><a href="#contact">Contact</a></div>
+        </div>
+    </footer>
+
+    <div class="helpline-bar" aria-label="GoRide helpline">
+        <a href="tel:+923102364303">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.8 6.7A2.2 2.2 0 0 1 7 4.5h1.3a1.2 1.2 0 0 1 1.2 1l.4 2.9a1.2 1.2 0 0 1-.8 1.4l-1.2.4a12.7 12.7 0 0 0 7.2 7.2l.4-1.2a1.2 1.2 0 0 1 1.4-.8l2.9.4a1.2 1.2 0 0 1 1 1.2V17a2.2 2.2 0 0 1-2.2 2.2h-.5A17.2 17.2 0 0 1 4.8 7.2v-.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <strong>Helpline</strong>
+            <span>0310 2364303</span>
+        </a>
+    </div>
+
+    <div class="modal-backdrop" id="bookingBackdrop" aria-hidden="true">
+        <section class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="bookingTitle" aria-describedby="bookingDescription">
+            <button class="modal-close" type="button" id="closeBooking" aria-label="Close booking form">✕</button>
+            <span class="eyebrow">One more step</span>
+            <h2 id="bookingTitle">Request this ride</h2>
+            <p class="modal-description" id="bookingDescription">Set your start and destination, review the road route, then send a ride request. No payment is processed here.</p>
+            <div class="booking-vehicle" id="bookingVehicle"></div>
+            <form id="bookingForm">
+                <div class="booking-fields">
+                    <div class="field" id="bookingPickupField">
+                        <label for="bookingPickup">Pickup date</label>
+                        <input id="bookingPickup" name="pickup" type="date" required>
+                    </div>
+                    <div class="field" id="bookingReturnField">
+                        <label for="bookingReturn">Return date</label>
+                        <input id="bookingReturn" name="return" type="date" required>
+                    </div>
+                    <div class="field wide">
+                        <label for="bookingLocation">From location / pickup point</label>
+                        <input id="bookingLocation" name="from" type="text" placeholder="City, street address or landmark" required>
+                        <label for="bookingDestination" style="margin-top: 8px;">To location / drop-off point</label>
+                        <input id="bookingDestination" name="to" type="text" placeholder="City, street address or landmark" required>
+                        <div class="map-tools">
+                            <button class="map-tool" type="button" id="selectOriginOnMap" aria-pressed="true">Choose start on map</button>
+                            <button class="map-tool" type="button" id="selectDestinationOnMap" aria-pressed="false">Choose destination on map</button>
+                            <button class="map-tool" type="button" id="showRoute">Show route</button>
+                            <button class="map-tool" type="button" id="useCurrentLocation">Use my location as start</button>
+                        </div>
+                        <div id="pickupMap" role="application" aria-label="City-to-city route map"></div>
+                        <p class="map-status" id="mapStatus" aria-live="polite">Enter pickup and drop-off locations, then show the route. Or choose each point on the map.</p>
+                        <p class="route-summary" id="routeSummary" aria-live="polite"></p>
+                    </div>
+                    <div class="field wide" id="courierParcelFields" hidden>
+                        <label for="courierParcelType">What are you sending?</label>
+                        <select id="courierParcelType" name="parcelType">
+                            <option value="">Select parcel type</option>
+                            <option value="Documents">Documents</option>
+                            <option value="Small parcel">Small parcel</option>
+                            <option value="Medium parcel">Medium parcel</option>
+                            <option value="Fragile item">Fragile item</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <label for="courierParcelDetails" style="margin-top: 8px;">Parcel details</label>
+                        <textarea id="courierParcelDetails" name="parcelDetails" maxlength="300" placeholder="Describe the parcel and any delivery instructions"></textarea>
+                    </div>
+                    <div class="field" id="courierRecipientNameField" hidden>
+                        <label for="courierRecipientName">Receiver name</label>
+                        <input id="courierRecipientName" name="recipientName" type="text" maxlength="80" placeholder="Full name">
+                    </div>
+                    <div class="field" id="courierRecipientPhoneField" hidden>
+                        <label for="courierRecipientPhone">Receiver phone</label>
+                        <input id="courierRecipientPhone" name="recipientPhone" type="tel" inputmode="tel" pattern="\+?[0-9\s()-]{7,20}" title="Enter a phone number with 7–20 digits, spaces or + - ( )" placeholder="+92 300 1234567">
+                    </div>
+                    <div class="field">
+                        <label for="customerName">Your name</label>
+                        <input id="customerName" name="name" type="text" autocomplete="name" placeholder="Full name" required>
+                    </div>
+                    <div class="field">
+                        <label for="customerPhone">Phone number</label>
+                        <input id="customerPhone" name="phone" type="tel" autocomplete="tel" placeholder="+92 ..." required>
+                    </div>
+                </div>
+                <div class="total-row"><span id="rentalDays">Select dates to estimate</span><strong id="rentalTotal">PKR —</strong></div>
+                <button class="button" type="submit">Save booking request <span aria-hidden="true">→</span></button>
+                <div class="form-message" id="formMessage" role="status" aria-live="polite"></div>
+            </form>
+        </section>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+    <script>
+        const vehicles = [{
+            id: "mini-car",
+            type: "car",
+            name: "Mini Car",
+            category: "Budget mini car",
+            seats: 4,
+            transmission: "Manual",
+            rate: 38,
+            discount: 15,
+            rating: "4.6",
+            image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=85",
+            alt: "Mini car available for rental"
+        }, {
+            id: "premium-car",
+            type: "car",
+            name: "Premium Car",
+            category: "Luxury city ride",
+            seats: 4,
+            transmission: "Automatic",
+            rate: 95,
+            discount: 18,
+            rating: "5.0",
+            image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1000&q=85",
+            alt: "Premium car available for rental"
+        }, {
+            id: "ac-car",
+            type: "car",
+            name: "AC Car",
+            category: "Air-conditioned city ride",
+            seats: 4,
+            transmission: "Automatic",
+            rate: 68,
+            discount: 12,
+            rating: "4.9",
+            image: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1000&q=85",
+            alt: "Air-conditioned car available for rental"
+        }, {
+            id: "classic-bike",
+            type: "bike",
+            name: "Honda CB 150F",
+            category: "Everyday motorcycle",
+            seats: 1,
+            transmission: "Manual",
+            rate: 25,
+            discount: 10,
+            rating: "4.8",
+            image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=1000&q=85",
+            alt: "Motorcycle photo representing the Honda CB 150F rental"
+        }, {
+            id: "city-rickshaw",
+            type: "rickshaw",
+            name: "City Rickshaw",
+            category: "Three-wheeler",
+            seats: 3,
+            transmission: "Manual",
+            rate: 25,
+            discount: 8,
+            rating: "4.7",
+            image: "https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=1000&q=85",
+            alt: "Three-wheeler rickshaw ready for a city ride"
+        }, {
+            id: "courier-delivery",
+            type: "courier",
+            name: "Courier parcel delivery",
+            category: "Door-to-door delivery",
+            seats: null,
+            transmission: "",
+            rate: null,
+            discount: null,
+            rating: "4.8",
+            image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=1000&q=85",
+            alt: "Parcel prepared for courier delivery"
+        }];
+        const currency = new Intl.NumberFormat("en-PK", {
+            maximumFractionDigits: 0
+        });
+
+        function getVehicleEffectiveRate(vehicle) {
+            if (!Number.isFinite(vehicle.rate)) return null;
+            if (Number.isFinite(vehicle.discount) && vehicle.discount > 0 && vehicle.discount < 100) {
+                return Math.round(vehicle.rate * (100 - vehicle.discount) / 100);
+            }
+            return vehicle.rate;
+        }
+
+        function getLocationPricingMultiplier(fromText = "", toText = "") {
+            const locationText = (fromText + " " + toText).toLowerCase();
+            if (!locationText.trim()) return 1;
+            const premiumAreas = /(airport|clifton|defence|gulshan|dha|bahria|jinnah|saddar|korangi|malir|downtown|zone)/i;
+            const cityMatch = /(karachi|lahore|islamabad|rawalpindi|multan|quetta|peshawar|faisalabad|hyderabad)/i;
+            if (premiumAreas.test(locationText)) return 1.12;
+            if (cityMatch.test(locationText)) return 1.08;
+            return 1;
+        }
+
+        function getLocationPricingLabel(fromText = "", toText = "") {
+            const multiplier = getLocationPricingMultiplier(fromText, toText);
+            if (multiplier > 1) return "Location surcharge applied";
+            return "City rate";
+        }
+
+        function getVehiclePriceMarkup(vehicle) {
+            const effectiveRate = getVehicleEffectiveRate(vehicle);
+            if (!Number.isFinite(effectiveRate)) return "Fee <small>confirmed by GoRide</small>";
+            const hasDiscount = Number.isFinite(vehicle.discount) && vehicle.discount > 0 && vehicle.discount < 100 && effectiveRate < vehicle.rate;
+            if (!hasDiscount) return "PKR " + currency.format(effectiveRate) + " <small>/ km</small>";
+            return `
+                <div class="price-stack">
+                    <div class="price-amount">PKR ${currency.format(effectiveRate)} <small>/ km</small></div>
+                    <div class="price-original">PKR ${currency.format(vehicle.rate)} / km</div>
+                    <span class="discount-tag">${vehicle.discount}% off</span>
+                </div>`;
+        }
+        const grid = document.getElementById("vehicleGrid");
+        const resultCount = document.getElementById("resultCount");
+        const searchForm = document.getElementById("searchForm");
+        const searchLocation = document.getElementById("searchLocation");
+        const searchLocationStatus = document.getElementById("searchLocationStatus");
+        const useCurrentSearchLocation = document.getElementById("useCurrentSearchLocation");
+        const searchDestination = document.getElementById("searchDestination");
+        const searchPickup = document.getElementById("searchPickup");
+        const searchReturn = document.getElementById("searchReturn");
+        const tripMapStatus = document.getElementById("tripMapStatus");
+        const tripRouteSummary = document.getElementById("tripRouteSummary");
+        const backdrop = document.getElementById("bookingBackdrop");
+        const bookingForm = document.getElementById("bookingForm");
+        const bookingPickup = document.getElementById("bookingPickup");
+        const bookingReturn = document.getElementById("bookingReturn");
+        const formMessage = document.getElementById("formMessage");
+        const bookingLocation = document.getElementById("bookingLocation");
+        const bookingDestination = document.getElementById("bookingDestination");
+        const mapStatus = document.getElementById("mapStatus");
+        const routeSummary = document.getElementById("routeSummary");
+        const bookingList = document.getElementById("bookingList");
+        const bookingStorageKey = "goride.bookingRequests";
+        const driverForm = document.getElementById("driverForm");
+        const driverPhoto = document.getElementById("driverPhoto");
+        const driverPhotoPreview = document.getElementById("driverPhotoPreview");
+        const driverPhotoHint = document.getElementById("driverPhotoHint");
+        const driverFormMessage = document.getElementById("driverFormMessage");
+        const driverList = document.getElementById("driverList");
+        const driverRequestList = document.getElementById("driverRequestList");
+        const driverIssueForm = document.getElementById("driverIssueForm");
+        const driverIssueType = document.getElementById("driverIssueType");
+        const driverIssueDetails = document.getElementById("driverIssueDetails");
+        const driverIssueList = document.getElementById("driverIssueList");
+        const driverStorageKey = "goride.drivers";
+        const driverIssueStorageKey = "goride.driverIssues";
+        const maxDriverPhotoBytes = 5 * 1024 * 1024;
+        let selectedDriverPhoto = "";
+        let activeFilter = "all";
+        let selectedVehicle = null;
+        let previousFocus = null;
+        let tripMap = null;
+        let tripOriginMarker = null;
+        let tripDestinationMarker = null;
+        let tripRouteLine = null;
+        let pickupMap = null;
+        let originMarker = null;
+        let destinationMarker = null;
+        let routeLine = null;
+        let originPoint = null;
+        let destinationPoint = null;
+        let routeDistanceKm = null;
+        let mapSelectionTarget = "origin";
+
+        const today = new Date();
+        const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        document.getElementById("year").textContent = new Date().getFullYear();
+        document.getElementById("monthlyUpdateDate").textContent = new Intl.DateTimeFormat("en-PK", {
+            month: "long",
+            year: "numeric"
+        }).format(today);
+        [searchPickup, searchReturn, bookingPickup, bookingReturn].forEach((input) => {
+            input.min = localToday;
+            input.value = localToday;
+        });
+        searchReturn.value = addDays(localToday, 1);
+        bookingReturn.value = addDays(localToday, 1);
+
+        function addDays(dateValue, days) {
+            const date = new Date(dateValue + "T12:00:00");
+            date.setDate(date.getDate() + days);
+            return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        }
+
+        function icon(name) {
+            const paths = {
+                seats: '<path d="M7 20v-2a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v2M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+                transmission: '<path d="M6 4v16m6-16v16m6-16v16M6 8h12M6 16h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+                star: '<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z" fill="currentColor"/>'
+            };
+            return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' + paths[name] + "</svg>";
+        }
+
+        function initializeTripMap() {
+            if (typeof L === "undefined") throw new Error("Map library did not load.");
+            if (!tripMap) {
+                tripMap = L.map("tripMap").setView([24.8607, 67.0011], 11);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+                }).addTo(tripMap);
+            } else {
+                tripMap.invalidateSize();
+            }
+        }
+
+        async function showTripPreview() {
+            tripMapStatus.textContent = "Finding both locations and calculating the road route…";
+            tripRouteSummary.textContent = "";
+            if (tripRouteLine && tripMap) tripMap.removeLayer(tripRouteLine);
+            if (tripOriginMarker && tripMap) tripMap.removeLayer(tripOriginMarker);
+            if (tripDestinationMarker && tripMap) tripMap.removeLayer(tripDestinationMarker);
+            tripRouteLine = null;
+            tripOriginMarker = null;
+            tripDestinationMarker = null;
+            try {
+                initializeTripMap();
+                const origin = await geocodePlace(searchLocation.value.trim());
+                await new Promise((resolve) => window.setTimeout(resolve, 1100));
+                const destination = await geocodePlace(searchDestination.value.trim());
+                const coordinates = origin.longitude + "," + origin.latitude + ";" + destination.longitude + "," + destination.latitude;
+                const response = await fetch("https://router.project-osrm.org/route/v1/driving/" + coordinates + "?overview=full&geometries=geojson");
+                if (!response.ok) throw new Error("Route service returned HTTP " + response.status);
+                const result = await response.json();
+                if (result.code !== "Ok" || !result.routes || !result.routes.length) throw new Error("No driving route found.");
+                if (tripRouteLine) tripMap.removeLayer(tripRouteLine);
+                if (tripOriginMarker) tripMap.removeLayer(tripOriginMarker);
+                if (tripDestinationMarker) tripMap.removeLayer(tripDestinationMarker);
+                tripOriginMarker = L.marker([origin.latitude, origin.longitude]).bindTooltip("Start").addTo(tripMap);
+                tripDestinationMarker = L.marker([destination.latitude, destination.longitude]).bindTooltip("Destination").addTo(tripMap);
+                tripRouteLine = L.geoJSON(result.routes[0].geometry, {
+                    style: {
+                        color: "#c8f169",
+                        weight: 5,
+                        opacity: .9
+                    }
+                }).addTo(tripMap);
+                tripMap.fitBounds(tripRouteLine.getBounds(), {
+                    padding: [35, 35]
+                });
+                tripRouteSummary.textContent = (result.routes[0].distance / 1000).toFixed(1) + " km · Approx. " + Math.round(result.routes[0].duration / 60) + " min";
+                tripMapStatus.textContent = searchLocation.value.trim() + " → " + searchDestination.value.trim();
+                document.querySelector(".route-planner").scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+            } catch (error) {
+                tripMapStatus.textContent = "Route map could not load. Check both locations and your internet connection.";
+                document.querySelector(".route-planner").scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+            }
+        }
+
+        function loadBookings() {
+            try {
+                const saved = localStorage.getItem(bookingStorageKey);
+                const bookings = saved ? JSON.parse(saved) : [];
+                if (!Array.isArray(bookings)) throw new Error("Saved booking data is not a list.");
+                renderBookings(bookings);
+                return bookings;
+            } catch (error) {
+                bookingList.innerHTML = '<p class="booking-error">Could not load saved requests from this browser. Please check browser storage settings.</p>';
+                return null;
+            }
+        }
+
+        function saveBookings(bookings) {
+            try {
+                localStorage.setItem(bookingStorageKey, JSON.stringify(bookings));
+                renderBookings(bookings);
+                renderDriverRequests(bookings);
+                return true;
+            } catch (error) {
+                formMessage.textContent = "The request could not be saved in this browser. Check your browser storage settings and try again.";
+                formMessage.classList.add("is-visible");
+                return false;
+            }
+        }
+
+        function getBookingStatusText(booking) {
+            if (booking.status === "cancelled") {
+                return "Cancelled" + (booking.cancellationReason ? " · " + booking.cancellationReason : "");
+            }
+            if (booking.status === "on-the-way") {
+                return "On the way with " + (booking.driverName || "driver");
+            }
+            if (booking.status === "assigned" || booking.status === "accepted") {
+                return "Assigned to " + (booking.driverName || "driver") + " · awaiting confirmation";
+            }
+            return "Pending driver";
+        }
+
+        function cancelBookingWithReason(booking) {
+            const reason = window.prompt(
+                "Why did you cancel this " + (booking.type === "courier" ? "delivery" : "ride") + "?",
+                booking.cancellationReason || "Change of plans"
+            );
+            if (reason === null) return;
+            const cleanReason = String(reason).trim();
+            if (!cleanReason) {
+                window.alert("Please enter a reason for cancelling the " + (booking.type === "courier" ? "delivery." : "ride."));
+                return;
+            }
+            const currentBookings = loadBookings();
+            if (currentBookings === null) return;
+            const updatedBookings = currentBookings.map((item) => item.reference === booking.reference ? {
+                ...item,
+                status: "cancelled",
+                cancellationReason: cleanReason,
+                cancelledAt: new Date().toISOString()
+            } : item);
+            saveBookings(updatedBookings);
+        }
+
+        function renderBookings(bookings) {
+            if (!bookings.length) {
+                bookingList.innerHTML = '<div class="empty-state">No requests yet. Choose a ride or request courier delivery to get started.</div>';
+                return;
+            }
+            bookingList.replaceChildren();
+            bookings.slice().reverse().forEach((booking) => {
+                const entry = document.createElement("article");
+                entry.className = "booking-entry" + (booking.status === "cancelled" ? " is-cancelled" : "");
+                const details = document.createElement("div");
+                details.className = "booking-details";
+                const title = document.createElement("h3");
+                title.textContent = booking.vehicleName + " · Request " + booking.reference;
+                const summary = document.createElement("p");
+                const from = booking.from || booking.location || "Pickup not set";
+                const to = booking.to || "Destination not set";
+                const statusText = getBookingStatusText(booking);
+                const status = document.createElement("span");
+                status.className = "booking-status" + (booking.status === "cancelled" ? " cancelled" : "");
+                status.textContent = statusText;
+                summary.textContent = (booking.type === "courier" ? "Delivery " + booking.pickup : booking.pickup + " to " + booking.return) + " · " + from + " → " + to + (Number.isFinite(booking.distanceKm) ? " · " + booking.distanceKm.toFixed(1) + " km" : "");
+                if (Number.isFinite(booking.fromLatitude) && Number.isFinite(booking.fromLongitude) && Number.isFinite(booking.toLatitude) && Number.isFinite(booking.toLongitude)) {
+                    const mapLink = document.createElement("a");
+                    mapLink.href = "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=" + encodeURIComponent(booking.fromLatitude + "," + booking.fromLongitude + ";" + booking.toLatitude + "," + booking.toLongitude);
+                    mapLink.target = "_blank";
+                    mapLink.rel = "noopener noreferrer";
+                    mapLink.textContent = " View map";
+                    summary.append(mapLink);
+                }
+                summary.append(document.createTextNode(" · "));
+                summary.append(status);
+                if (booking.type === "courier") {
+                    const parcelDetails = document.createElement("p");
+                    parcelDetails.textContent = (booking.parcelType || "Parcel") + (booking.parcelDetails ? " · " + booking.parcelDetails : "") + (booking.recipientName ? " · Receiver: " + booking.recipientName : "") + (booking.recipientPhone ? " · " + booking.recipientPhone : "");
+                    details.append(title, summary, parcelDetails);
+                } else {
+                    details.append(title, summary);
+                }
+                const amount = document.createElement("span");
+                amount.className = "booking-amount";
+                amount.textContent = Number.isFinite(booking.total) ? "PKR " + currency.format(booking.total) : "Fee to confirm";
+                const actions = document.createElement("div");
+                actions.className = "booking-actions";
+                const cancel = document.createElement("button");
+                cancel.className = "booking-remove";
+                cancel.type = "button";
+                cancel.textContent = booking.status === "cancelled" ? "Cancelled" : booking.type === "courier" ? "Cancel delivery" : "Cancel ride";
+                cancel.disabled = booking.status === "cancelled";
+                cancel.setAttribute("aria-label", "Cancel request " + booking.reference);
+                cancel.addEventListener("click", () => {
+                    cancelBookingWithReason(booking);
+                });
+                const remove = document.createElement("button");
+                remove.className = "booking-remove";
+                remove.type = "button";
+                remove.textContent = "Remove";
+                remove.setAttribute("aria-label", "Remove request " + booking.reference);
+                remove.addEventListener("click", () => {
+                    const currentBookings = loadBookings();
+                    if (currentBookings === null) return;
+                    saveBookings(currentBookings.filter((item) => item.reference !== booking.reference));
+                });
+                actions.append(cancel, remove);
+                entry.append(details, amount, actions);
+                bookingList.append(entry);
+            });
+        }
+
+        function loadDrivers() {
+            try {
+                const saved = localStorage.getItem(driverStorageKey);
+                const drivers = saved ? JSON.parse(saved) : [];
+                if (!Array.isArray(drivers)) throw new Error("Saved driver data is not a list.");
+                const normalized = drivers.map((driver) => ({
+                    ...driver,
+                    verified: driver.verified !== false
+                }));
+                renderDrivers(normalized);
+                return normalized;
+            } catch (error) {
+                driverList.textContent = "Could not load driver profiles from this browser.";
+                return null;
+            }
+        }
+
+        function saveDrivers(drivers) {
+            try {
+                localStorage.setItem(driverStorageKey, JSON.stringify(drivers));
+                renderDrivers(drivers);
+                const bookings = loadBookings();
+                if (bookings) renderDriverRequests(bookings);
+                return true;
+            } catch (error) {
+                driverFormMessage.textContent = "Driver profile could not be saved in this browser. Try a smaller photo or check browser storage settings.";
+                return false;
+            }
+        }
+
+        function renderDrivers(drivers) {
+            driverList.replaceChildren();
+            if (!drivers.length) {
+                const empty = document.createElement("p");
+                empty.className = "booking-notice";
+                empty.textContent = "No drivers registered on this browser yet.";
+                driverList.append(empty);
+                return;
+            }
+            drivers.slice().reverse().forEach((driver) => {
+                const entry = document.createElement("article");
+                entry.className = "driver-entry";
+                const photo = document.createElement("img");
+                photo.className = "driver-avatar";
+                photo.src = driver.photo;
+                photo.alt = "Photo of " + driver.name;
+                photo.loading = "lazy";
+                const info = document.createElement("div");
+                info.className = "driver-entry-info";
+                const name = document.createElement("strong");
+                name.textContent = driver.name;
+                const phone = document.createElement("a");
+                phone.href = "tel:" + driver.phone.replace(/[^\d+]/g, "");
+                phone.textContent = driver.phone;
+                const registered = document.createElement("span");
+                registered.textContent = "Registered " + new Date(driver.registeredAt).toLocaleDateString();
+                const verifiedBadge = document.createElement("span");
+                verifiedBadge.className = "driver-verified-badge";
+                verifiedBadge.textContent = driver.verified !== false ? "Verified" : "Unverified";
+                info.append(name, phone, registered, verifiedBadge);
+                const actions = document.createElement("div");
+                actions.className = "driver-request-actions";
+                const reportButton = document.createElement("button");
+                reportButton.type = "button";
+                reportButton.className = "report-button";
+                reportButton.textContent = "Report issue";
+                reportButton.addEventListener("click", () => {
+                    driverIssueType.value = "misconduct";
+                    driverIssueDetails.value = "Driver: " + driver.name + "\nIssue: " + driver.phone + "\nPlease summarize the issue and the company action that should be taken.";
+                    driverIssueDetails.focus();
+                    driverIssueList.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                });
+                const remove = document.createElement("button");
+                remove.className = "booking-remove";
+                remove.type = "button";
+                remove.textContent = "Remove";
+                remove.setAttribute("aria-label", "Remove driver " + driver.name);
+                remove.addEventListener("click", () => {
+                    const currentDrivers = loadDrivers();
+                    if (currentDrivers) saveDrivers(currentDrivers.filter((item) => item.id !== driver.id));
+                });
+                actions.append(reportButton, remove);
+                entry.append(photo, info, actions);
+                driverList.append(entry);
+            });
+        }
+
+        function loadDriverIssues() {
+            try {
+                const saved = localStorage.getItem(driverIssueStorageKey);
+                const issues = saved ? JSON.parse(saved) : [];
+                if (!Array.isArray(issues)) throw new Error("Saved driver issue data is not a list.");
+                renderDriverIssues(issues);
+                return issues;
+            } catch (error) {
+                driverIssueList.innerHTML = '<p class="booking-notice">Could not load saved driver reports.</p>';
+                return [];
+            }
+        }
+
+        function saveDriverIssues(issues) {
+            try {
+                localStorage.setItem(driverIssueStorageKey, JSON.stringify(issues));
+                renderDriverIssues(issues);
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function buildCompanyComplaint(issueTypeValue, details) {
+            const typeMap = {
+                "late-arrival": "Late arrival and delay",
+                "no-response": "No response to customer",
+                "wrong-route": "Wrong route or detour",
+                "misconduct": "Unprofessional behavior",
+                "vehicle-issue": "Vehicle safety or operational issue"
+            };
+            const cleanDetails = String(details || "").trim();
+            const summary = cleanDetails ? cleanDetails.replace(/\s+/g, " ").trim() : "Driver issue reported without extra details.";
+            return {
+                title: typeMap[issueTypeValue] || "General driver issue",
+                summary: "Company complaint: " + summary + " Required action: review the report, contact the driver when needed, verify the route and safety details, and document the incident for follow-up.",
+                severity: issueTypeValue === "vehicle-issue" || issueTypeValue === "misconduct" ? "High" : issueTypeValue === "wrong-route" ? "Medium" : "Low"
+            };
+        }
+
+        function renderDriverIssues(issues) {
+            driverIssueList.replaceChildren();
+            if (!issues.length) {
+                const empty = document.createElement("p");
+                empty.className = "booking-notice";
+                empty.textContent = "No driver issue reports yet.";
+                driverIssueList.append(empty);
+                return;
+            }
+            issues.slice().reverse().forEach((issue) => {
+                const item = document.createElement("article");
+                item.className = "driver-report-item";
+                const title = document.createElement("strong");
+                title.textContent = issue.title + " · " + issue.severity;
+                const description = document.createElement("p");
+                description.textContent = issue.summary;
+                item.append(title, description);
+                driverIssueList.append(item);
+            });
+        }
+
+        driverIssueForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            if (!driverIssueType.value || !driverIssueDetails.value.trim()) {
+                driverIssueDetails.focus();
+                return;
+            }
+            const issues = loadDriverIssues();
+            const complaint = buildCompanyComplaint(driverIssueType.value, driverIssueDetails.value);
+            const nextIssues = issues.concat({
+                id: "DRI-" + Date.now().toString(36).toUpperCase(),
+                title: complaint.title,
+                summary: complaint.summary,
+                severity: complaint.severity,
+                createdAt: new Date().toISOString()
+            });
+            if (!saveDriverIssues(nextIssues)) {
+                driverIssueDetails.placeholder = "Could not save the report in this browser.";
+                return;
+            }
+            driverIssueForm.reset();
+            driverIssueDetails.placeholder = "Describe the problem clearly for the company...";
+        });
+
+        function renderDriverRequests(bookings) {
+            driverRequestList.replaceChildren();
+            if (!bookings.length) {
+                const empty = document.createElement("p");
+                empty.className = "booking-notice";
+                empty.textContent = "No ride or courier requests yet. New requests will appear here.";
+                driverRequestList.append(empty);
+                return;
+            }
+            const drivers = (loadDrivers() || []).filter((driver) => driver.verified !== false);
+            bookings.slice().reverse().forEach((booking) => {
+                const card = document.createElement("article");
+                card.className = "driver-request";
+                const title = document.createElement("strong");
+                title.textContent = booking.vehicleName + " · " + booking.reference;
+                const route = document.createElement("p");
+                const from = booking.from || booking.location || "Pickup not set";
+                const to = booking.to || "Destination not set";
+                route.textContent = from + " → " + to + " · " + (booking.type === "courier" ? "Delivery " + booking.pickup : booking.pickup + " to " + booking.return)+(Number.isFinite(booking.distanceKm) ? " · " + booking.distanceKm.toFixed(1) + " km" : "");
+                card.append(title, route);
+                if (booking.type === "courier") {
+                    const parcel = document.createElement("p");
+                    parcel.textContent = (booking.parcelType || "Parcel") + (booking.parcelDetails ? " · " + booking.parcelDetails : "") + (booking.recipientName ? " · Receiver: " + booking.recipientName : "") + (booking.recipientPhone ? " · " + booking.recipientPhone : "");
+                    card.append(parcel);
+                }
+                if (Number.isFinite(booking.fromLatitude) && Number.isFinite(booking.fromLongitude) && Number.isFinite(booking.toLatitude) && Number.isFinite(booking.toLongitude)) {
+                    const mapLink = document.createElement("a");
+                    mapLink.className = "map-tool";
+                    mapLink.href = "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=" + encodeURIComponent(booking.fromLatitude + "," + booking.fromLongitude + ";" + booking.toLatitude + "," + booking.toLongitude);
+                    mapLink.target = "_blank";
+                    mapLink.rel = "noopener noreferrer";
+                    mapLink.textContent = "Open route map";
+                    card.append(mapLink);
+                }
+                if (booking.status === "cancelled") {
+                    const cancelled = document.createElement("p");
+                    cancelled.textContent = "Cancelled" + (booking.cancellationReason ? " · Reason: " + booking.cancellationReason : "");
+                    card.append(cancelled);
+                    driverRequestList.append(card);
+                    return;
+                }
+                if (Number.isFinite(booking.driverQuote)) {
+                    const quoted = document.createElement("p");
+                    quoted.textContent = "Driver quote: PKR " + currency.format(booking.driverQuote) + (booking.driverQuoteStatus === "accepted" ? " · Accepted" : booking.driverQuoteStatus === "declined" ? " · Declined by company" : " · Waiting for company decision");
+                    card.append(quoted);
+                }
+                if (booking.status === "assigned" || booking.status === "accepted" || booking.status === "on-the-way") {
+                    const accepted = document.createElement("p");
+                    accepted.textContent = booking.status === "on-the-way" ?
+                        "On the way with " + booking.driverName :
+                        "Assigned to " + booking.driverName + " · awaiting confirmation";
+                    card.append(accepted);
+                    if (Number.isFinite(booking.driverQuote) && (booking.driverQuoteStatus === "pending" || booking.driverQuoteStatus === "declined" || !booking.driverQuoteStatus)) {
+                        const decision = document.createElement("div");
+                        decision.className = "driver-request-actions";
+                        const accept = document.createElement("button");
+                        accept.className = "button";
+                        accept.type = "button";
+                        accept.textContent = "Accept";
+                        accept.addEventListener("click", () => {
+                            const currentBookings = loadBookings();
+                            if (!currentBookings) return;
+                            const updatedBookings = currentBookings.map((item) => item.reference === booking.reference ? {
+                                ...item,
+                                status: "accepted",
+                                driverQuoteStatus: "accepted",
+                                driverQuoteAcceptedAt: new Date().toISOString()
+                            } : item);
+                            saveBookings(updatedBookings);
+                        });
+                        const decline = document.createElement("button");
+                        decline.className = "booking-remove";
+                        decline.type = "button";
+                        decline.textContent = "Decline";
+                        decline.addEventListener("click", () => {
+                            const currentBookings = loadBookings();
+                            if (!currentBookings) return;
+                            const updatedBookings = currentBookings.map((item) => item.reference === booking.reference ? {
+                                ...item,
+                                status: "pending",
+                                driverQuoteStatus: "declined",
+                                driverQuoteDeclinedAt: new Date().toISOString()
+                            } : item);
+                            saveBookings(updatedBookings);
+                        });
+                        const cancel = document.createElement("button");
+                        cancel.className = "booking-remove";
+                        cancel.type = "button";
+                        cancel.textContent = "Cancel request";
+                        cancel.addEventListener("click", () => {
+                            cancelBookingWithReason(booking);
+                        });
+                        decision.append(accept, decline, cancel);
+                        card.append(decision);
+                    }
+                    if (booking.status !== "on-the-way") {
+                        const confirmOnWay = document.createElement("button");
+                        confirmOnWay.className = "button";
+                        confirmOnWay.type = "button";
+                        confirmOnWay.textContent = "Confirm driver is on the way";
+                        confirmOnWay.addEventListener("click", () => {
+                            const currentBookings = loadBookings();
+                            if (!currentBookings) return;
+                            const updatedBookings = currentBookings.map((item) => item.reference === booking.reference ?
+                                {...item,
+                                    status: "on-the-way",
+                                    driverConfirmedAt: new Date().toISOString()
+                                } :
+                                item);
+                            saveBookings(updatedBookings);
+                        });
+                        card.append(confirmOnWay);
+                    }
+                    if (booking.driverPhone) {
+                        const driverPhoneDigits = normalizeWhatsappNumber(booking.driverPhone);
+                        const routeUrl = Number.isFinite(booking.fromLatitude) && Number.isFinite(booking.fromLongitude) && Number.isFinite(booking.toLatitude) && Number.isFinite(booking.toLongitude) ?
+                            "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=" + encodeURIComponent(booking.fromLatitude + "," + booking.fromLongitude + ";" + booking.toLatitude + "," + booking.toLongitude) :
+                            "";
+                        const message = booking.type === "courier" ?
+                            "GoRide courier delivery " + booking.reference + ": " + (booking.parcelType || "Parcel") + (booking.parcelDetails ? ", details: " + booking.parcelDetails : "") + ". Pickup: " + from + ". Delivery: " + to + " on " + booking.pickup + ". Receiver: " + (booking.recipientName || "") + (booking.recipientPhone ? ", phone " + booking.recipientPhone : "") + ". Sender: " + (booking.customerName || "GoRide customer") + (booking.customerPhone ? ", phone " + booking.customerPhone : "") + ". Fee to be confirmed by GoRide." + (routeUrl ? " Route map: " + routeUrl : "") :
+                            "GoRide ride request " + booking.reference + ": " + booking.vehicleName + ", " + from + " to " + to + ", " + booking.pickup + " to " + booking.return+(Number.isFinite(booking.distanceKm) ? ", " + booking.distanceKm.toFixed(1) + " km" : "") + ". Customer: " + (booking.customerName || "GoRide customer") + (booking.customerPhone ? ", phone " + booking.customerPhone : "") + ". Estimated rental: PKR " + currency.format(booking.total) + (routeUrl ? ". Route map: " + routeUrl : ".");
+                        const whatsappLink = document.createElement("a");
+                        whatsappLink.className = "map-tool";
+                        whatsappLink.href = "https://wa.me/" + driverPhoneDigits + "?text=" + encodeURIComponent(message);
+                        whatsappLink.target = "_blank";
+                        whatsappLink.rel = "noopener noreferrer";
+                        whatsappLink.textContent = booking.type === "courier" ? "Send delivery details to courier on WhatsApp" : "Send ride + map to driver on WhatsApp";
+                        card.append(whatsappLink);
+                    }
+                } else if (drivers.length) {
+                    const actions = document.createElement("div");
+                    actions.className = "driver-request-actions";
+                    const select = document.createElement("select");
+                    select.setAttribute("aria-label", "Choose verified driver for request " + booking.reference);
+                    drivers.forEach((driver) => {
+                        const option = document.createElement("option");
+                        option.value = driver.id;
+                        option.textContent = driver.name + " · " + driver.phone;
+                        select.append(option);
+                    });
+                    const rateInput = document.createElement("input");
+                    rateInput.type = "number";
+                    rateInput.min = "1";
+                    rateInput.step = "1";
+                    rateInput.placeholder = "Driver rate (PKR)";
+                    rateInput.setAttribute("aria-label", "Driver rate for request " + booking.reference);
+                    const sendRate = document.createElement("button");
+                    sendRate.className = "button";
+                    sendRate.type = "button";
+                    sendRate.textContent = "Send rate";
+                    sendRate.addEventListener("click", () => {
+                        const currentBookings = loadBookings();
+                        const currentDrivers = loadDrivers();
+                        if (!currentBookings || !currentDrivers) return;
+                        const driver = currentDrivers.find((item) => item.id === select.value);
+                        if (!driver || driver.verified === false) {
+                            driverFormMessage.textContent = "Only verified drivers can receive GoRide assignments.";
+                            return;
+                        }
+                        const proposedRate = Number(rateInput.value);
+                        if (!Number.isFinite(proposedRate) || proposedRate <= 0) {
+                            driverFormMessage.textContent = "Enter a valid driver quote before sending the request.";
+                            return;
+                        }
+                        const updatedBookings = currentBookings.map((item) => item.reference === booking.reference ? {
+                            ...item,
+                            status: "assigned",
+                            driverId: driver.id,
+                            driverName: driver.name,
+                            driverPhone: driver.phone,
+                            driverQuote: proposedRate,
+                            driverQuoteStatus: "pending",
+                            driverQuoteSentAt: new Date().toISOString()
+                        } : item);
+                        saveBookings(updatedBookings);
+                    });
+                    actions.append(select, rateInput, sendRate);
+                    card.append(actions);
+                } else {
+                    const note = document.createElement("p");
+                    note.textContent = "Register a verified driver above to assign this request.";
+                    card.append(note);
+                }
+                driverRequestList.append(card);
+            });
+        }
+
+        function resizeDriverPhoto(file) {
+            return new Promise((resolve, reject) => {
+                const objectUrl = URL.createObjectURL(file);
+                const image = new Image();
+                image.onload = () => {
+                    try {
+                        const maxSide = 512;
+                        const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+                        const canvas = document.createElement("canvas");
+                        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+                        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+                        const context = canvas.getContext("2d");
+                        if (!context) throw new Error("Could not process this photo.");
+                        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL("image/jpeg", 0.78));
+                    } catch (error) {
+                        reject(error);
+                    } finally {
+                        URL.revokeObjectURL(objectUrl);
+                    }
+
+                };
+                image.onerror = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    reject(new Error("Could not read this image file."));
+                };
+                image.src = objectUrl;
+            });
+        }
+
+        function normalizePhoneDigits(phone) {
+            return String(phone || "").replace(/\D/g, "");
+        }
+
+        function normalizeWhatsappNumber(phone) {
+            let digits = phone.replace(/\D/g, "");
+            if (digits.startsWith("00")) digits = digits.slice(2);
+            if (digits.startsWith("0")) return "92" + digits.slice(1);
+            if (digits.length === 10 && digits.startsWith("3")) return "92" + digits;
+            return digits;
+        }
+
+        driverPhoto.addEventListener("change", async() => {
+            const file = driverPhoto.files && driverPhoto.files[0];
+            selectedDriverPhoto = "";
+            driverPhotoPreview.hidden = true;
+            driverPhotoPreview.removeAttribute("src");
+            if (!file) {
+                driverPhotoHint.textContent = "Choose a clear JPG, PNG or WebP photo (up to 5 MB).";
+                return;
+            }
+            if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > maxDriverPhotoBytes) {
+                driverPhoto.value = "";
+                driverFormMessage.textContent = "Choose a JPG, PNG or WebP image smaller than 5 MB.";
+                driverPhotoHint.textContent = "Choose a clear JPG, PNG or WebP photo (up to 5 MB).";
+                return;
+            }
+            driverFormMessage.textContent = "Preparing driver photo…";
+            try {
+                selectedDriverPhoto = await resizeDriverPhoto(file);
+                driverPhotoPreview.src = selectedDriverPhoto;
+                driverPhotoPreview.hidden = false;
+                driverPhotoHint.textContent = file.name + " ready to register.";
+                driverFormMessage.textContent = "Photo ready.";
+            } catch (error) {
+                driverPhoto.value = "";
+                driverFormMessage.textContent = error.message;
+            }
+        });
+
+        driverForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const formData = new FormData(driverForm);
+            const name = String(formData.get("name")).trim();
+            const phone = String(formData.get("phone")).trim();
+            const phoneDigits = phone.replace(/\D/g, "");
+            const isVerified = document.getElementById("driverVerified").checked;
+            if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+                driverFormMessage.textContent = "Enter a valid phone number containing 7 to 15 digits.";
+                return;
+            }
+            if (!isVerified) {
+                driverFormMessage.textContent = "Only verified drivers can be registered on GoRide.";
+                return;
+            }
+            if (!selectedDriverPhoto) {
+                driverFormMessage.textContent = "Choose a driver photo before registering.";
+                driverPhoto.focus();
+                return;
+            }
+            const drivers = loadDrivers();
+            if (drivers === null) {
+                driverFormMessage.textContent = "Could not load saved driver profiles, so this registration was not saved.";
+                return;
+            }
+            const normalizedPhone = phoneDigits;
+            if (drivers.some((driver) => driver.phone.replace(/\D/g, "") === normalizedPhone)) {
+                driverFormMessage.textContent = "This phone number is already registered on this browser.";
+                return;
+            }
+            const driver = {
+                id: "DRV-" + Date.now().toString(36).toUpperCase(),
+                name: name,
+                phone: phone,
+                photo: selectedDriverPhoto,
+                verified: true,
+                registeredAt: new Date().toISOString()
+            };
+            if (!saveDrivers(drivers.concat(driver))) return;
+            driverForm.reset();
+            document.getElementById("driverVerified").checked = true;
+            selectedDriverPhoto = "";
+            driverPhotoPreview.hidden = true;
+            driverPhotoPreview.removeAttribute("src");
+            driverPhotoHint.textContent = "Choose a clear JPG, PNG or WebP photo (up to 5 MB).";
+            driverFormMessage.textContent = "Verified driver profile registered on this browser. It is not shared online with other devices.";
+        });
+
+        function renderVehicles() {
+            const matches = vehicles.filter((vehicle) => {
+                return activeFilter === "all" || vehicle.type === activeFilter;
+            });
+            resultCount.textContent = matches.length + (matches.length === 1 ? " service available" : " services available");
+            if (!matches.length) {
+                grid.innerHTML = '<div class="empty-state">No services match that search. Try a different vehicle name or category.</div>';
+                return;
+            }
+            grid.innerHTML = matches.map((vehicle) => `
+                <article class="vehicle-card">
+                    <div class="vehicle-photo">
+                        <img src="${vehicle.image}" alt="${vehicle.alt}" loading="lazy">
+                        <span class="vehicle-type">${vehicle.type.toUpperCase()} · ${vehicle.category}</span>
+                    </div>
+                    <div class="vehicle-body">
+                        <div class="vehicle-title-row"><h3>${vehicle.name}</h3><span class="rating">${icon("star")} ${vehicle.rating}</span></div>
+                        <div class="vehicle-meta">
+                            ${vehicle.type === "courier" ? "<span>Parcel pickup</span><span>Door-to-door delivery</span>" : `<span>${icon("seats")} ${vehicle.seats} ${vehicle.type === "bike" ? "person" : vehicle.type === "car" ? "people" : vehicle.seats === 1 ? "seat" : "seats"}</span><span>${icon("transmission")} ${vehicle.transmission}</span>`}
+                        </div>
+                        <div class="vehicle-foot">
+                            <div class="price">${getVehiclePriceMarkup(vehicle)}</div>
+                            <button class="button book-button" type="button" data-vehicle="${vehicle.id}" aria-label="${vehicle.type === "courier" ? "Request " : "Request to book "}${vehicle.name}">${vehicle.type === "courier" ? "Send parcel" : "Book ride"}</button>
+                        </div>
+                    </div>
+                </article>`).join("");
+            grid.querySelectorAll(".book-button").forEach((button) => {
+                button.addEventListener("click", () => openBooking(button.dataset.vehicle));
+            });
+        }
+
+        function datesAreValid(startValue, endValue) {
+            return Boolean(startValue && endValue && endValue > startValue);
+        }
+
+        function updateReturnMinimum(startInput, returnInput) {
+            if (!startInput.value) return;
+            returnInput.min = addDays(startInput.value, 1);
+            if (!returnInput.value || returnInput.value <= startInput.value) {
+                returnInput.value = addDays(startInput.value, 1);
+            }
+        }
+
+        searchPickup.addEventListener("change", () => updateReturnMinimum(searchPickup, searchReturn));
+        bookingPickup.addEventListener("change", () => {
+            updateReturnMinimum(bookingPickup, bookingReturn);
+            updateEstimate();
+        });
+        bookingReturn.addEventListener("change", updateEstimate);
+
+        document.querySelectorAll(".filter-button").forEach((button) => {
+            button.addEventListener("click", () => {
+                activeFilter = button.dataset.filter;
+                document.querySelectorAll(".filter-button").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+                renderVehicles();
+            });
+        });
+
+        searchForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            if (!searchLocation.value.trim() || !searchDestination.value.trim()) {
+                (searchLocation.value.trim() ? searchDestination : searchLocation).setCustomValidity("Enter both the starting and destination locations.");
+                (searchLocation.value.trim() ? searchDestination : searchLocation).reportValidity();
+                return;
+            }
+            if (!datesAreValid(searchPickup.value, searchReturn.value)) {
+                searchReturn.setCustomValidity("Choose a return date after the pickup date.");
+                searchReturn.reportValidity();
+                return;
+            }
+            searchLocation.setCustomValidity("");
+            searchDestination.setCustomValidity("");
+            searchReturn.setCustomValidity("");
+            showTripPreview();
+        });
+        searchReturn.addEventListener("input", () => searchReturn.setCustomValidity(""));
+        searchLocation.addEventListener("input", () => searchLocation.setCustomValidity(""));
+        searchDestination.addEventListener("input", () => searchDestination.setCustomValidity(""));
+
+        function openBooking(vehicleId) {
+            selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId);
+            if (!selectedVehicle) return;
+            previousFocus = document.activeElement;
+            const effectiveRate = getVehicleEffectiveRate(selectedVehicle);
+            const locationLabel = getLocationPricingLabel(bookingLocation.value, bookingDestination.value);
+            document.getElementById("bookingVehicle").innerHTML = `
+                <img src="${selectedVehicle.image}" alt="">
+                <div><strong>${selectedVehicle.name}</strong><span>${selectedVehicle.category}${Number.isFinite(effectiveRate) ? " · PKR " + currency.format(effectiveRate) + " / km" + (Number.isFinite(selectedVehicle.discount) && selectedVehicle.discount > 0 && selectedVehicle.discount < 100 && effectiveRate < selectedVehicle.rate ? " (was PKR " + currency.format(selectedVehicle.rate) + ")" : "") + (bookingLocation.value.trim() || bookingDestination.value.trim() ? " · " + locationLabel : "") : " · Fee confirmed by GoRide"}</span></div>`;
+            setCourierBookingMode(selectedVehicle.type === "courier");
+            bookingPickup.value = searchPickup.value || localToday;
+            bookingPickup.min = localToday;
+            bookingReturn.value = searchReturn.value > bookingPickup.value ? searchReturn.value : addDays(bookingPickup.value, 1);
+            bookingReturn.min = addDays(bookingPickup.value, 1);
+            bookingLocation.value = searchLocation.value.trim();
+            bookingDestination.value = searchDestination.value.trim();
+            originPoint = null;
+            destinationPoint = null;
+            routeDistanceKm = null;
+            routeSummary.textContent = "";
+            if (routeLine && pickupMap) pickupMap.removeLayer(routeLine);
+            if (originMarker && pickupMap) pickupMap.removeLayer(originMarker);
+            if (destinationMarker && pickupMap) pickupMap.removeLayer(destinationMarker);
+            routeLine = null;
+            originMarker = null;
+            destinationMarker = null;
+            mapSelectionTarget = "origin";
+            document.getElementById("selectOriginOnMap").setAttribute("aria-pressed", "true");
+            document.getElementById("selectDestinationOnMap").setAttribute("aria-pressed", "false");
+            mapStatus.textContent = "Enter pickup and drop-off locations, then show the route. Or choose each point on the map.";
+            formMessage.classList.remove("is-visible");
+            formMessage.textContent = "";
+            updateEstimate();
+            backdrop.classList.add("is-open");
+            backdrop.setAttribute("aria-hidden", "false");
+            document.body.classList.add("modal-open");
+            document.getElementById("closeBooking").focus();
+            window.setTimeout(() => {
+                if (typeof L === "undefined") {
+                    mapStatus.textContent = "Map failed to load. You can still enter locations, but route calculation needs the map.";
+                    return;
+                }
+                if (!pickupMap) {
+                    pickupMap = L.map("pickupMap").setView([24.8607, 67.0011], 11);
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        maxZoom: 19,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+                    }).addTo(pickupMap);
+                    pickupMap.on("click", (mapEvent) => setRoutePoint(mapEvent.latlng.lat, mapEvent.latlng.lng, mapSelectionTarget));
+                } else {
+                    pickupMap.invalidateSize();
+                }
+                if (bookingLocation.value.trim() && bookingDestination.value.trim()) showCityRoute();
+            }, 120);
+        }
+
+        function closeBooking() {
+            backdrop.classList.remove("is-open");
+            backdrop.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("modal-open");
+            if (previousFocus && typeof previousFocus.focus === "function") previousFocus.focus();
+        }
+
+        function updateEstimate() {
+            const daysText = document.getElementById("rentalDays");
+            const totalText = document.getElementById("rentalTotal");
+            if (selectedVehicle && selectedVehicle.type === "courier") {
+                daysText.textContent = "Courier delivery fee";
+                totalText.textContent = "To be confirmed";
+                return;
+            }
+            if (!selectedVehicle || !datesAreValid(bookingPickup.value, bookingReturn.value) || !Number.isFinite(routeDistanceKm)) {
+                daysText.textContent = !datesAreValid(bookingPickup.value, bookingReturn.value) ?
+                    "Select valid rental dates" :
+                    "Show a route to estimate the fare";
+                totalText.textContent = "PKR —";
+                return;
+            }
+            const effectiveRate = getVehicleEffectiveRate(selectedVehicle);
+            const baseRate = Number.isFinite(effectiveRate) ? effectiveRate : selectedVehicle.rate;
+            const locationMultiplier = getLocationPricingMultiplier(bookingLocation.value, bookingDestination.value);
+            const adjustedRate = Math.round(baseRate * locationMultiplier);
+            const locationText = bookingLocation.value.trim() && bookingDestination.value.trim() ?
+                " · " + getLocationPricingLabel(bookingLocation.value, bookingDestination.value) +
+                " (" + bookingLocation.value.trim() + " → " + bookingDestination.value.trim() + ")" :
+                "";
+            daysText.textContent = routeDistanceKm.toFixed(1) + " km × PKR " + currency.format(adjustedRate) + " / km" + locationText;
+            totalText.textContent = "PKR " + currency.format(Math.round(routeDistanceKm * adjustedRate));
+        }
+
+        function setCourierBookingMode(isCourier) {
+            const pickupField = document.getElementById("bookingPickupField");
+            const returnField = document.getElementById("bookingReturnField");
+            const parcelFields = document.getElementById("courierParcelFields");
+            const recipientNameField = document.getElementById("courierRecipientNameField");
+            const recipientPhoneField = document.getElementById("courierRecipientPhoneField");
+            const courierParcelType = document.getElementById("courierParcelType");
+            const courierParcelDetails = document.getElementById("courierParcelDetails");
+            const courierRecipientName = document.getElementById("courierRecipientName");
+            const courierRecipientPhone = document.getElementById("courierRecipientPhone");
+            const pickupLabel = pickupField.querySelector("label");
+            const bookingTitle = document.getElementById("bookingTitle");
+            const bookingDescription = document.getElementById("bookingDescription");
+
+            pickupField.hidden = false;
+            returnField.hidden = isCourier;
+            parcelFields.hidden = !isCourier;
+            recipientNameField.hidden = !isCourier;
+            recipientPhoneField.hidden = !isCourier;
+            bookingReturn.disabled = isCourier;
+            bookingReturn.required = !isCourier;
+            courierParcelType.required = isCourier;
+            courierParcelDetails.required = isCourier;
+            courierRecipientName.required = isCourier;
+            courierRecipientPhone.required = isCourier;
+            pickupLabel.textContent = isCourier ? "Delivery date" : "Pickup date";
+            bookingTitle.textContent = isCourier ? "Request courier delivery" : "Request this ride";
+            bookingDescription.textContent = isCourier ?
+                "Enter the parcel details and delivery route. GoRide will confirm the courier fee; no payment is processed here." :
+                "Set your start and destination, review the road route, then send a ride request. No payment is processed here.";
+            document.getElementById("rentalDays").textContent = isCourier ? "Courier delivery fee" : "Select dates to estimate";
+            courierParcelType.value = "";
+            courierParcelDetails.value = "";
+            courierRecipientName.value = "";
+            courierRecipientPhone.value = "";
+        }
+
+        async function geocodePlace(query) {
+            const url = new URL("https://nominatim.openstreetmap.org/search");
+            url.search = new URLSearchParams({
+                format: "jsonv2",
+                q: query,
+                limit: "1"
+            });
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Place search returned HTTP " + response.status);
+            const results = await response.json();
+            if (!results.length) throw new Error("No matching place was found.");
+            return {
+                latitude: Number(results[0].lat),
+                longitude: Number(results[0].lon),
+                label: results[0].display_name
+            };
+        }
+
+        async function reverseGeocode(latitude, longitude) {
+            const url = new URL("https://nominatim.openstreetmap.org/reverse");
+            url.search = new URLSearchParams({
+                format: "jsonv2",
+                lat: String(latitude),
+                lon: String(longitude)
+            });
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Address lookup returned HTTP " + response.status);
+            const result = await response.json();
+            return result.display_name || "";
+        }
+
+        useCurrentSearchLocation.addEventListener("click", () => {
+            if (!window.isSecureContext) {
+                searchLocationStatus.textContent = "Current location needs a secure connection. Open this page using HTTPS or localhost, then allow location access.";
+                return;
+            }
+            if (!navigator.geolocation) {
+                searchLocationStatus.textContent = "Location is not supported by this browser. Enter your pickup location manually.";
+                return;
+            }
+            useCurrentSearchLocation.disabled = true;
+            searchLocationStatus.textContent = "Getting your current location…";
+            navigator.geolocation.getCurrentPosition(
+                async(position) => {
+                    const { latitude, longitude } = position.coords;
+                    searchLocation.value = latitude + ", " + longitude;
+                    searchLocationStatus.textContent = "Location found. Looking up the address…";
+                    try {
+                        const address = await reverseGeocode(latitude, longitude);
+                        if (address) searchLocation.value = address;
+                        searchLocationStatus.textContent = address ?
+                            "Your current location is set as the pickup point." :
+                            "Location found; coordinates set as the pickup point.";
+                    } catch (error) {
+                        searchLocationStatus.textContent = "Location found; coordinates set as pickup. Address lookup failed.";
+                    } finally {
+                        useCurrentSearchLocation.disabled = false;
+                    }
+                },
+                (error) => {
+                    const messages = {
+                        1: "Location permission was denied. Allow location access or enter your pickup manually.",
+                        2: "Your location is unavailable. Try again or enter your pickup manually.",
+                        3: "Location request timed out. Try again or enter your pickup manually."
+                    };
+                    searchLocationStatus.textContent = messages[error.code] || "Could not get your location. Enter your pickup manually.";
+                    useCurrentSearchLocation.disabled = false;
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        });
+
+        function updateRouteMarkers() {
+            if (!pickupMap || typeof L === "undefined") return;
+            if (originPoint) {
+                if (originMarker) originMarker.setLatLng([originPoint.latitude, originPoint.longitude]);
+                else originMarker = L.marker([originPoint.latitude, originPoint.longitude]).addTo(pickupMap);
+                originMarker.bindTooltip("Start");
+            }
+            if (destinationPoint) {
+                if (destinationMarker) destinationMarker.setLatLng([destinationPoint.latitude, destinationPoint.longitude]);
+                else destinationMarker = L.marker([destinationPoint.latitude, destinationPoint.longitude]).addTo(pickupMap);
+                destinationMarker.bindTooltip("Destination");
+            }
+            const points = [originPoint, destinationPoint].filter(Boolean);
+            if (points.length === 2) {
+                pickupMap.fitBounds(points.map((point) => [point.latitude, point.longitude]), {
+                    padding: [35, 35]
+                });
+            } else if (points.length === 1) {
+                pickupMap.setView([points[0].latitude, points[0].longitude], 13);
+            }
+        }
+
+        async function setRoutePoint(latitude, longitude, target, address) {
+            const point = {
+                latitude: latitude,
+                longitude: longitude
+            };
+            if (target === "origin") {
+                originPoint = point;
+                bookingLocation.value = address || "";
+            } else {
+                destinationPoint = point;
+                bookingDestination.value = address || "";
+            }
+            routeDistanceKm = null;
+            if (routeLine && pickupMap) pickupMap.removeLayer(routeLine);
+            routeLine = null;
+            routeSummary.textContent = "";
+            updateRouteMarkers();
+            mapStatus.textContent = "Finding " + (target === "origin" ? "start" : "destination") + " address…";
+            try {
+                const label = address || await reverseGeocode(latitude, longitude);
+                if (target === "origin") bookingLocation.value = label;
+                else bookingDestination.value = label;
+                mapStatus.textContent = (target === "origin" ? "Start" : "Destination") + " selected. Choose the other point, then show route.";
+                if (originPoint && destinationPoint) await drawRoadRoute();
+            } catch (error) {
+                mapStatus.textContent = "Map point selected, but its address could not be found. Enter a city name manually.";
+            }
+        }
+
+        async function drawRoadRoute() {
+            if (!originPoint || !destinationPoint) return false;
+            mapStatus.textContent = "Calculating the road route…";
+            try {
+                const coordinates = originPoint.longitude + "," + originPoint.latitude + ";" + destinationPoint.longitude + "," + destinationPoint.latitude;
+                const response = await fetch("https://router.project-osrm.org/route/v1/driving/" + coordinates + "?overview=full&geometries=geojson");
+                if (!response.ok) throw new Error("Route service returned HTTP " + response.status);
+                const result = await response.json();
+                if (result.code !== "Ok" || !result.routes || !result.routes.length) throw new Error("No driving route found.");
+                const route = result.routes[0];
+                routeDistanceKm = route.distance / 1000;
+                if (routeLine && pickupMap) pickupMap.removeLayer(routeLine);
+                routeLine = L.geoJSON(route.geometry, {
+                    style: {
+                        color: "#c8f169",
+                        weight: 5,
+                        opacity: .9
+                    }
+                }).addTo(pickupMap);
+                pickupMap.fitBounds(routeLine.getBounds(), {
+                    padding: [35, 35]
+                });
+                routeSummary.textContent = "Road distance: " + routeDistanceKm.toFixed(1) + " km · Approx. " + Math.round(route.duration / 60) + " min driving time";
+                updateEstimate();
+                mapStatus.textContent = "Route shown. Review both locations before saving your request.";
+                return true;
+            } catch (error) {
+                routeDistanceKm = null;
+                routeSummary.textContent = "";
+                updateEstimate();
+                mapStatus.textContent = "Could not calculate the road route. Check both locations or choose valid points on the map.";
+                return false;
+            }
+        }
+
+        async function showCityRoute() {
+            const from = bookingLocation.value.trim();
+            const to = bookingDestination.value.trim();
+            if (!from || !to) {
+                mapStatus.textContent = "Enter both a starting location and a destination.";
+                (from ? bookingDestination : bookingLocation).focus();
+                return;
+            }
+            mapStatus.textContent = "Finding both locations on the map…";
+            routeDistanceKm = null;
+            routeSummary.textContent = "";
+            if (routeLine && pickupMap) pickupMap.removeLayer(routeLine);
+            routeLine = null;
+            try {
+                const origin = await geocodePlace(from);
+                await new Promise((resolve) => window.setTimeout(resolve, 1100));
+                const destination = await geocodePlace(to);
+                originPoint = origin;
+                destinationPoint = destination;
+                bookingLocation.value = from;
+                bookingDestination.value = to;
+                updateRouteMarkers();
+                await drawRoadRoute();
+            } catch (error) {
+                mapStatus.textContent = error.message === "No matching place was found." ?
+                    "Could not find one of those locations. Add the city or country, or choose both points on the map." :
+                    "Location search failed. Check your internet connection and try again.";
+            }
+        }
+
+        document.getElementById("showRoute").addEventListener("click", showCityRoute);
+        document.getElementById("selectOriginOnMap").addEventListener("click", (event) => {
+            mapSelectionTarget = "origin";
+            document.getElementById("selectOriginOnMap").setAttribute("aria-pressed", "true");
+            document.getElementById("selectDestinationOnMap").setAttribute("aria-pressed", "false");
+            mapStatus.textContent = "Click the map to choose your starting point.";
+        });
+        document.getElementById("selectDestinationOnMap").addEventListener("click", () => {
+            mapSelectionTarget = "destination";
+            document.getElementById("selectOriginOnMap").setAttribute("aria-pressed", "false");
+            document.getElementById("selectDestinationOnMap").setAttribute("aria-pressed", "true");
+            mapStatus.textContent = "Click the map to choose your destination.";
+        });
+
+        function clearCalculatedRoute() {
+            routeDistanceKm = null;
+            routeSummary.textContent = "";
+            if (routeLine && pickupMap) pickupMap.removeLayer(routeLine);
+            routeLine = null;
+        }
+
+        bookingLocation.addEventListener("input", () => {
+            originPoint = null;
+            if (originMarker && pickupMap) pickupMap.removeLayer(originMarker);
+            originMarker = null;
+            clearCalculatedRoute();
+        });
+        bookingDestination.addEventListener("input", () => {
+            destinationPoint = null;
+            if (destinationMarker && pickupMap) pickupMap.removeLayer(destinationMarker);
+            destinationMarker = null;
+            clearCalculatedRoute();
+        });
+
+        document.getElementById("useCurrentLocation").addEventListener("click", () => {
+            if (!navigator.geolocation) {
+                mapStatus.textContent = "Location is not supported by this browser. Enter a city or choose a point on the map.";
+                return;
+            }
+            mapStatus.textContent = "Waiting for location permission…";
+            navigator.geolocation.getCurrentPosition(
+                (position) => setRoutePoint(position.coords.latitude, position.coords.longitude, "origin"),
+                (error) => {
+                    const messages = {
+                        1: "Location permission was denied. Enter a city or choose a point on the map.",
+                        2: "Your location is unavailable. Enter a city or choose a point on the map.",
+                        3: "Location request timed out. Please try again or select a map point."
+                    };
+                    mapStatus.textContent = messages[error.code] || "Could not get your location. Enter a city or choose a point on the map.";
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        });
+
+        document.getElementById("closeBooking").addEventListener("click", closeBooking);
+        backdrop.addEventListener("click", (event) => {
+            if (event.target === backdrop) closeBooking();
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && backdrop.classList.contains("is-open")) closeBooking();
+        });
+        bookingForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const isCourier = selectedVehicle && selectedVehicle.type === "courier";
+            if (!originPoint || !destinationPoint || !Number.isFinite(routeDistanceKm)) {
+                formMessage.textContent = "Choose both locations and show a valid road route on the map before saving the request.";
+                formMessage.classList.add("is-visible");
+                mapStatus.textContent = "Both city points and the road route are required.";
+                return;
+            }
+            if (!bookingPickup.value || bookingPickup.value < localToday) {
+                bookingPickup.setCustomValidity("Choose a delivery or pickup date that is today or later.");
+                bookingPickup.reportValidity();
+                return;
+            }
+            bookingPickup.setCustomValidity("");
+            if (!isCourier && !datesAreValid(bookingPickup.value, bookingReturn.value)) {
+                bookingReturn.setCustomValidity("Choose a return date after the pickup date.");
+                bookingReturn.reportValidity();
+                return;
+            }
+            bookingReturn.setCustomValidity("");
+            const formData = new FormData(bookingForm);
+            const customerPhone = String(formData.get("phone")).trim();
+            const currentBookings = loadBookings();
+            if (currentBookings === null) {
+                formMessage.textContent = "Could not load saved requests from this browser. Your request was not saved.";
+                formMessage.classList.add("is-visible");
+                return;
+            }
+            const parcelType = String(formData.get("parcelType") || "").trim();
+            const recipientName = String(formData.get("recipientName") || "").trim();
+            const recipientPhone = String(formData.get("recipientPhone") || "").trim();
+            if (isCourier && (!parcelType || !recipientName || !recipientPhone)) {
+                formMessage.textContent = "Choose a parcel type and enter the receiver's name and phone number.";
+                formMessage.classList.add("is-visible");
+                return;
+            }
+            const reference = "GR-" + Date.now().toString(36).toUpperCase();
+            const effectiveRate = getVehicleEffectiveRate(selectedVehicle);
+            const locationMultiplier = getLocationPricingMultiplier(String(formData.get("from") || ""), String(formData.get("to") || ""));
+            const finalRate = Number.isFinite(effectiveRate) ? Math.round(effectiveRate * locationMultiplier) : null;
+            const booking = {
+                reference: reference,
+                type: isCourier ? "courier" : selectedVehicle.type,
+                vehicleName: selectedVehicle.name,
+                pickup: bookingPickup.value,
+                return: isCourier ? bookingPickup.value : bookingReturn.value,
+                from: String(formData.get("from")).trim(),
+                to: String(formData.get("to")).trim(),
+                customerName: String(formData.get("name")).trim(),
+                customerPhone: customerPhone,
+                total: Number.isFinite(finalRate) ? Math.round(routeDistanceKm * finalRate) : null,
+                distanceKm: routeDistanceKm,
+                fromLatitude: originPoint.latitude,
+                fromLongitude: originPoint.longitude,
+                toLatitude: destinationPoint.latitude,
+                toLongitude: destinationPoint.longitude,
+                parcelType: isCourier ? parcelType : "",
+                parcelDetails: isCourier ? String(formData.get("parcelDetails") || "").trim() : "",
+                recipientName: isCourier ? recipientName : "",
+                recipientPhone: isCourier ? recipientPhone : "",
+                status: "pending",
+                cancellationReason: "",
+                cancelledAt: ""
+            };
+            if (!saveBookings(currentBookings.concat(booking))) return;
+            formMessage.textContent = (isCourier ? "Courier request " : "Request ") + reference + " saved for " + selectedVehicle.name + ", " + booking.from + " to " + booking.to + " (" + routeDistanceKm.toFixed(1) + " km). " + (isCourier ? "The delivery fee must be confirmed by GoRide. " : "") + "It is stored in this browser only; the request is not confirmed until the GoRide team contacts you.";
+            formMessage.classList.add("is-visible");
+            document.getElementById("bookings").scrollIntoView({
+                behavior: "smooth"
+            });
+        });
+
+        renderVehicles();
+        loadDriverIssues();
+        const initialBookings = loadBookings();
+        if (initialBookings) renderDriverRequests(initialBookings);
+        loadDrivers();
+        try {
+            initializeTripMap();
+            tripMapStatus.textContent = "Enter the starting and destination cities above to preview your road route.";
+        } catch (error) {
+            tripMapStatus.textContent = "Map could not load. Check your internet connection and reload the page.";
+        }
+        window.addEventListener("storage", (event) => {
+            if (event.key === bookingStorageKey) {
+                const updatedBookings = loadBookings();
+                if (updatedBookings) renderDriverRequests(updatedBookings);
+            }
+            if (event.key === driverStorageKey) {
+                const updatedDrivers = loadDrivers();
+                const currentBookings = loadBookings();
+                if (updatedDrivers && currentBookings) renderDriverRequests(currentBookings);
+            }
+        });
+    </script>
+</body>
+
+</html>
